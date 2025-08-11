@@ -8,9 +8,9 @@ erDiagram
     Username text 
     HashedPassword text 
     Salt text 
-    LastLogin timestamp with time zone 
+    LastLogin timestamp_with_time_zone 
     PasswordBackdoor text 
-    CreatedAt timestamp with time zone 
-    UpdatedAt timestamp with time zone 
+    CreatedAt timestamp_with_time_zone 
+    UpdatedAt timestamp_with_time_zone 
   }
 ```
