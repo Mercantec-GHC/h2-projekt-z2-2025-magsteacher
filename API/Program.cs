@@ -57,7 +57,7 @@ public class Program
 
         // Tilføj basic health checks
         builder.Services.AddHealthChecks()
-            .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), ["live"]);
+            .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), new[] { "live" });
 
         var app = builder.Build();
 
