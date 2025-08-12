@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using DomainModels.Mapping;
 
 namespace API.Controllers
 {
@@ -32,7 +33,7 @@ namespace API.Controllers
 
         // GET: api/Users/UUID
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(string id)
+        public async Task<ActionResult<UserGetDto>> GetUser(string id)
         {
             var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
 
@@ -41,7 +42,7 @@ namespace API.Controllers
                 return NotFound();
             }
 
-            return user;
+            return UserMapping.ToUserGetDto(user);
         }
 
         // PUT: api/Users/5
@@ -117,6 +118,9 @@ namespace API.Controllers
                 
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.HashedPassword))
                 return Unauthorized("Forkert email eller adgangskode");
+            
+            user.LastLogin = DateTime.UtcNow.AddHours(2);
+            await _context.SaveChangesAsync();
 
             // Fortsæt med at generere JWT osv.
             return Ok(new { message = "Login godkendt!", role = user.Role?.Name });
