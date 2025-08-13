@@ -28,7 +28,14 @@ namespace DomainModels
         public required string Id { get; set; }
         public required string Name { get; set; }
         public string Address { get; set; } = "";
-        
+
     }
 
+    // DTO for hotel update / PUT
+    public class HotelPutDto
+    {
+        public required string Id { get; set; }
+        public required string Name { get; set; }
+        public string Address { get; set; } = "";
+    }
 }

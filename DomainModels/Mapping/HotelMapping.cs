@@ -8,7 +8,7 @@ namespace DomainModels.Mapping
 {
     public class HotelMapping
     {
-        public HotelGetDto ToHotelWithBookingsGetDto(Hotel hotel)
+        public static HotelGetDto ToHotelGetDto(Hotel hotel)
         {
             return new HotelGetDto
             {
@@ -18,7 +18,12 @@ namespace DomainModels.Mapping
             };
         }
 
-        public Hotel ToHotelFromDto(HotelPostDto hotelPostDto)
+        public static List<HotelGetDto> ToHotelGetDtos(List<Hotel> hotels)
+        {
+            return hotels.Select(h => ToHotelGetDto(h)).ToList();
+        }
+
+        public static Hotel ToHotelFromDto(HotelPostDto hotelPostDto)
         {
             return new Hotel
             {
