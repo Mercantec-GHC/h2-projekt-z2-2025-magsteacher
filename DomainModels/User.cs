@@ -25,6 +25,13 @@ namespace DomainModels
         /// Navigation property til Role
         /// </summary>
         public virtual Role? Role { get; set; }
+
+        public string UserInfoId { get; set; } = string.Empty;
+
+        public UserInfo? Info { get; set; }
+
+        public List<Booking> Bookings { get; set; } = new();
+
     }
 
     // DTO til registrering
@@ -53,6 +60,8 @@ namespace DomainModels
         public string Password { get; set; } = string.Empty;
     }
 
+
+    // DTO for getting user information - Hiding Password and userinfo
     public class UserGetDto
     {
         public string Id { get; set; } = string.Empty;

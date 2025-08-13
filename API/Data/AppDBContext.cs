@@ -11,6 +11,9 @@ namespace API.Data
         }
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Role> Roles { get; set; } = null!;
+        public DbSet<UserInfo> UserInfos { get; set; } = null!;
+        public DbSet<Hotel> Hotels { get; set; } = null!;
+        public DbSet<Room> Rooms { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,6 +36,29 @@ namespace API.Data
                     .HasForeignKey(u => u.RoleId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<UserInfo>()
+                .HasKey(i => i.UserId); // Shared PK
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Info)
+                .WithOne(i => i.User)
+                .HasForeignKey<UserInfo>(i => i.UserId);
+
+            modelBuilder.Entity<Hotel>()
+                .HasMany(h => h.Rooms)
+                .WithOne(r => r.Hotel)
+                .HasForeignKey(r => r.HotelId);
+
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.User)
+                .WithMany(u => u.Bookings)
+                .HasForeignKey(b => b.UserId);
+
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.Room)
+                .WithMany(r => r.Bookings)
+                .HasForeignKey(b => b.RoomId);
 
             // Seed roller og test brugere (kun til udvikling)
             SeedRoles(modelBuilder);

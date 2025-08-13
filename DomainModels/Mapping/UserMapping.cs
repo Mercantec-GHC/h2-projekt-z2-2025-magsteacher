@@ -12,4 +12,5 @@ public class UserMapping
             Role = user.Role?.Name ?? string.Empty
         };
     }
+
 }

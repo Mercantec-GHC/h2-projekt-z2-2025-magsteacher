@@ -35,7 +35,9 @@ namespace API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<UserGetDto>> GetUser(string id)
         {
-            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
             {
@@ -99,7 +101,10 @@ namespace API.Controllers
                 HashedPassword = hashedPassword,
                 Username = dto.Username,
                 PasswordBackdoor = dto.Password,
-                RoleId = userRole.Id
+                RoleId = userRole.Id,
+                CreatedAt = DateTime.UtcNow.AddHours(2),
+                UpdatedAt = DateTime.UtcNow.AddHours(2),
+
             };
 
             _context.Users.Add(user);
