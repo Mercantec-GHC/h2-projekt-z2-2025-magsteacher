@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-## 🟢 Tirsdag | Fejlhåndtering og sikkerhed
+## Fejlhåndtering og sikkerhed
 
 - [ ] Gennemgå og forstå CORS (Cross Origin Resource Sharing)
   - [ ] Implementér en restriktiv CORS-politik i jeres API
