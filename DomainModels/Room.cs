@@ -9,7 +9,7 @@ namespace DomainModels
     // Room.cs
     public class Room : Common
     {
-        public required string Number { get; set; }
+        public string Number { get; set; } = string.Empty;
         public int Capacity { get; set; }
 
         public string HotelId { get; set; } = string.Empty;
