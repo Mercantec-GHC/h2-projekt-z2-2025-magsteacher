@@ -36,6 +36,7 @@ namespace API.Controllers
         }
 
         // GET: api/Users/UUID
+        [Authorize(Roles = "Admin, User")]
         [HttpGet("{id}")]
         public async Task<ActionResult<UserGetDto>> GetUser(string id)
         {
