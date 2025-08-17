@@ -1,0 +1,19 @@
+meta {
+  name: Sletter en bruger fra systemet.
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/Users/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

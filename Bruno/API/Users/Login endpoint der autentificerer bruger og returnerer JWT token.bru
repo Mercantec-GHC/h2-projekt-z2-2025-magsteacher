@@ -1,0 +1,26 @@
+meta {
+  name: Login endpoint der autentificerer bruger og returnerer JWT token.
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/Users/login
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "email": "mags@mercantec.dk",
+    "password": "Cisco1234!"
+  }
+}
+
+assert {
+  : eq
+}

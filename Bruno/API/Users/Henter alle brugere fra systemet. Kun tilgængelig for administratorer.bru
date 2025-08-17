@@ -1,0 +1,15 @@
+meta {
+  name: Henter alle brugere fra systemet. Kun tilgængelig for administratorer.
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Users
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

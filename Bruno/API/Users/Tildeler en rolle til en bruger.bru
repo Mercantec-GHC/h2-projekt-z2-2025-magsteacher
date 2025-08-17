@@ -1,0 +1,25 @@
+meta {
+  name: Tildeler en rolle til en bruger.
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/Users/:id/role
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "roleId": ""
+  }
+}

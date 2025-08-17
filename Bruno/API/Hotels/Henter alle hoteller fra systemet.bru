@@ -1,0 +1,15 @@
+meta {
+  name: Henter alle hoteller fra systemet.
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Hotels
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

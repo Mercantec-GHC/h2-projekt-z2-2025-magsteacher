@@ -1,0 +1,15 @@
+meta {
+  name: Tjekker om databasen er tilgængelig (dummy indtil EFCore er sat op).
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/Status/dbhealthcheck
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

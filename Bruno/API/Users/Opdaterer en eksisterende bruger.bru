@@ -1,0 +1,54 @@
+meta {
+  name: Opdaterer en eksisterende bruger.
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/Users/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "id": "",
+    "createdAt": "",
+    "updatedAt": "",
+    "email": "",
+    "username": "",
+    "hashedPassword": "",
+    "salt": "",
+    "lastLogin": "",
+    "passwordBackdoor": "",
+    "roleId": "",
+    "role": {
+      "id": "",
+      "createdAt": "",
+      "updatedAt": "",
+      "name": "",
+      "description": "",
+      "users": []
+    },
+    "userInfoId": "",
+    "info": {
+      "firstName": "",
+      "lastName": "",
+      "phone": "",
+      "address": "",
+      "city": "",
+      "avatarUrl": "",
+      "userId": "",
+      "user": ""
+    },
+    "bookings": []
+  }
+}

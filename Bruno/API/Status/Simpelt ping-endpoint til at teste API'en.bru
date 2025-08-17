@@ -1,0 +1,15 @@
+meta {
+  name: Simpelt ping-endpoint til at teste API'en.
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/Status/ping
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

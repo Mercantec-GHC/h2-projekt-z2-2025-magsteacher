@@ -1,0 +1,19 @@
+meta {
+  name: Henter alle brugere med en specifik rolle.
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/Users/role/:roleName
+  body: none
+  auth: none
+}
+
+params:path {
+  roleName: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

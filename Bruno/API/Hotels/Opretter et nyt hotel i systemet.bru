@@ -1,0 +1,22 @@
+meta {
+  name: Opretter et nyt hotel i systemet.
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/Hotels
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "name": "",
+    "address": ""
+  }
+}
