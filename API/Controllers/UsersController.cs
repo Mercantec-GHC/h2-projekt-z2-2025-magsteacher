@@ -14,6 +14,10 @@ using System.Security.Claims;
 
 namespace API.Controllers
 {
+    /// <summary>
+    /// Controller til håndtering af bruger-relaterede operationer.
+    /// Indeholder funktionalitet til brugeradministration, autentificering og autorisering.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
@@ -21,13 +25,25 @@ namespace API.Controllers
         private readonly AppDBContext _context;
         private readonly JwtService _jwtService;
 
+        /// <summary>
+        /// Initialiserer en ny instans af UsersController.
+        /// </summary>
+        /// <param name="context">Database context til adgang til brugerdata.</param>
+        /// <param name="jwtService">Service til håndtering af JWT tokens.</param>
         public UsersController(AppDBContext context, JwtService jwtService)
         {
             _context = context;
             _jwtService = jwtService;
         }
 
-        // GET: api/Users
+        /// <summary>
+        /// Henter alle brugere fra systemet. Kun tilgængelig for administratorer.
+        /// </summary>
+        /// <returns>En liste af alle brugere med deres roller.</returns>
+        /// <response code="200">Brugerlisten blev hentet succesfuldt.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - kun administratorer har adgang.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
@@ -35,7 +51,16 @@ namespace API.Controllers
             return await _context.Users.Include(u => u.Role).ToListAsync();
         }
 
-        // GET: api/Users/UUID
+        /// <summary>
+        /// Henter en specifik bruger baseret på ID.
+        /// </summary>
+        /// <param name="id">Unikt ID for brugeren.</param>
+        /// <returns>Brugerens information.</returns>
+        /// <response code="200">Brugeren blev fundet og returneret.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - utilstrækkelige rettigheder.</response>
+        /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [Authorize(Roles = "Admin, User")]
         [HttpGet("{id}")]
         public async Task<ActionResult<UserGetDto>> GetUser(string id)
@@ -52,8 +77,19 @@ namespace API.Controllers
             return UserMapping.ToUserGetDto(user);
         }
 
-        // PUT: api/Users/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Opdaterer en eksisterende bruger.
+        /// </summary>
+        /// <param name="id">ID på brugeren der skal opdateres.</param>
+        /// <param name="user">Opdaterede brugerdata.</param>
+        /// <returns>Bekræftelse på opdateringen.</returns>
+        /// <response code="204">Brugeren blev opdateret succesfuldt.</response>
+        /// <response code="400">Ugyldig forespørgsel - ID matcher ikke bruger ID.</response>
+        /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        /// <remarks>
+        /// For at beskytte mod overposting angreb, se https://go.microsoft.com/fwlink/?linkid=2123754
+        /// </remarks>
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(string id, User user)
         {
@@ -83,8 +119,18 @@ namespace API.Controllers
             return NoContent();
         }
 
-        // POST: api/Users
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Registrerer en ny bruger i systemet.
+        /// </summary>
+        /// <param name="dto">Registreringsdata for den nye bruger.</param>
+        /// <returns>Bekræftelse på brugeroprettelsen.</returns>
+        /// <response code="200">Brugeren blev oprettet succesfuldt.</response>
+        /// <response code="400">Ugyldig forespørgsel - email eksisterer allerede eller manglende data.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        /// <remarks>
+        /// For at beskytte mod overposting angreb, se https://go.microsoft.com/fwlink/?linkid=2123754
+        /// Adgangskoden bliver hashet før gemning i databasen.
+        /// </remarks>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
@@ -119,10 +165,16 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Login endpoint der returnerer JWT token
+        /// Login endpoint der autentificerer bruger og returnerer JWT token.
         /// </summary>
-        /// <param name="dto">Login credentials</param>
-        /// <returns>JWT token og brugerinfo</returns>
+        /// <param name="dto">Login credentials indeholdende email og adgangskode.</param>
+        /// <returns>JWT token og brugerinformation ved succesfuldt login.</returns>
+        /// <response code="200">Login godkendt - returnerer token og brugerinfo.</response>
+        /// <response code="401">Ikke autoriseret - forkert email eller adgangskode.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        /// <remarks>
+        /// Opdaterer brugerens sidste login tidspunkt ved succesfuldt login.
+        /// </remarks>
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
@@ -152,9 +204,16 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Hent information om den nuværende bruger baseret på JWT token
+        /// Henter information om den nuværende bruger baseret på JWT token.
         /// </summary>
-        /// <returns>Brugerens information</returns>
+        /// <returns>Detaljeret brugerinformation inklusiv roller, info og bookinger.</returns>
+        /// <response code="200">Brugerinformation blev hentet succesfuldt.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="404">Brugeren blev ikke fundet i databasen.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        /// <remarks>
+        /// Returnerer omfattende brugerdata inklusiv relaterede entiteter som bookinger og rum.
+        /// </remarks>
         [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
@@ -209,7 +268,14 @@ namespace API.Controllers
             });
         }
 
-        // DELETE: api/Users/5
+        /// <summary>
+        /// Sletter en bruger fra systemet.
+        /// </summary>
+        /// <param name="id">ID på brugeren der skal slettes.</param>
+        /// <returns>Bekræftelse på sletningen.</returns>
+        /// <response code="204">Brugeren blev slettet succesfuldt.</response>
+        /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(string id)
         {
@@ -225,7 +291,16 @@ namespace API.Controllers
             return NoContent();
         }
 
-        // PUT: api/Users/{id}/role
+        /// <summary>
+        /// Tildeler en rolle til en bruger.
+        /// </summary>
+        /// <param name="id">ID på brugeren der skal tildeles en rolle.</param>
+        /// <param name="dto">Data med rolle-ID der skal tildeles.</param>
+        /// <returns>Bekræftelse på rolletildelingen.</returns>
+        /// <response code="200">Rollen blev tildelt succesfuldt.</response>
+        /// <response code="400">Ugyldig rolle eller forespørgsel.</response>
+        /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpPut("{id}/role")]
         public async Task<IActionResult> AssignUserRole(string id, AssignRoleDto dto)
         {
@@ -263,7 +338,14 @@ namespace API.Controllers
             return Ok(new { message = "Rolle tildelt til bruger!", user.Email, role = role.Name });
         }
 
-        // GET: api/Users/role/{roleName}
+        /// <summary>
+        /// Henter alle brugere med en specifik rolle.
+        /// </summary>
+        /// <param name="roleName">Navnet på rollen der skal filtreres på.</param>
+        /// <returns>En liste af brugere med den angivne rolle.</returns>
+        /// <response code="200">Brugerlisten blev hentet succesfuldt.</response>
+        /// <response code="400">Ugyldig rolle - rollen eksisterer ikke.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpGet("role/{roleName}")]
         public async Task<ActionResult<IEnumerable<User>>> GetUsersByRole(string roleName)
         {
@@ -281,7 +363,15 @@ namespace API.Controllers
             return users;
         }
 
-        // DELETE: api/Users/{id}/role
+        /// <summary>
+        /// Fjerner en brugers rolle og sætter den til standard brugerrolle.
+        /// </summary>
+        /// <param name="id">ID på brugeren hvis rolle skal fjernes.</param>
+        /// <returns>Bekræftelse på rollefjernelsen.</returns>
+        /// <response code="200">Rollen blev fjernet og bruger sat til standard rolle.</response>
+        /// <response code="400">Standard brugerrolle ikke fundet i systemet.</response>
+        /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpDelete("{id}/role")]
         public async Task<IActionResult> RemoveUserRole(string id)
         {
@@ -305,7 +395,12 @@ namespace API.Controllers
             return Ok(new { message = "Rolle fjernet fra bruger. Tildelt standard rolle.", user.Email });
         }
 
-        // GET: api/Users/roles
+        /// <summary>
+        /// Henter alle tilgængelige roller i systemet.
+        /// </summary>
+        /// <returns>En liste af alle roller med ID, navn og beskrivelse.</returns>
+        /// <response code="200">Rollerne blev hentet succesfuldt.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpGet("roles")]
         public async Task<ActionResult<object>> GetAvailableRoles()
         {
@@ -320,6 +415,11 @@ namespace API.Controllers
             return Ok(roles);
         }
 
+        /// <summary>
+        /// Hjælpemetode til at kontrollere om en bruger eksisterer.
+        /// </summary>
+        /// <param name="id">ID på brugeren der skal kontrolleres.</param>
+        /// <returns>True hvis brugeren eksisterer, ellers false.</returns>
         private bool UserExists(string id)
         {
             return _context.Users.Any(e => e.Id == id);
