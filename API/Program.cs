@@ -27,6 +27,9 @@ public class Program
 
         // Registrer JWT Service
         builder.Services.AddScoped<JwtService>();
+        
+        // Registrer Login Attempt Service
+        builder.Services.AddScoped<LoginAttemptService>();
 
         // Konfigurer JWT Authentication
         var jwtSecretKey = Configuration["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("Jwt:SecretKey");
@@ -57,6 +60,9 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddControllers();
+        
+        // Add Memory Cache for login attempt tracking
+        builder.Services.AddMemoryCache();
 
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddSwaggerGen(c =>
