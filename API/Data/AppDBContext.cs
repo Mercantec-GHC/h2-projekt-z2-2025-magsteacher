@@ -14,6 +14,7 @@ namespace API.Data
         public DbSet<UserInfo> UserInfos { get; set; } = null!;
         public DbSet<Hotel> Hotels { get; set; } = null!;
         public DbSet<Room> Rooms { get; set; } = null!;
+        public DbSet<Booking> Bookings { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

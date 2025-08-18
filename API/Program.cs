@@ -30,6 +30,9 @@ public class Program
         
         // Registrer Login Attempt Service
         builder.Services.AddScoped<LoginAttemptService>();
+        
+        // Registrer Data Seeder Service
+        builder.Services.AddScoped<DataSeederService>();
 
         // Konfigurer JWT Authentication
         var jwtSecretKey = Configuration["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("Jwt:SecretKey");
