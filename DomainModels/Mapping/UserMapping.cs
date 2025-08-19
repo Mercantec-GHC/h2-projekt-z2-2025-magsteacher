@@ -13,4 +13,11 @@ public class UserMapping
         };
     }
 
+    /// <summary>
+    /// Konverterer liste af User til liste af UserGetDto
+    /// </summary>
+    public static List<UserGetDto> ToUserGetDtos(List<User> users)
+    {
+        return users.Select(u => ToUserGetDto(u)).ToList();
+    }
 }

@@ -53,7 +53,7 @@ namespace API.Controllers
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserGetDto>>> GetUsers()
         {
             try
             {
@@ -63,8 +63,10 @@ namespace API.Controllers
                     .Include(u => u.Role)
                     .ToListAsync();
 
+                var userDtos = UserMapping.ToUserGetDtos(users);
+
                 _logger.LogInformation("Hentet {UserCount} brugere succesfuldt", users.Count);
-                return Ok(users);
+                return Ok(userDtos);
             }
             catch (Exception ex)
             {
@@ -495,7 +497,7 @@ namespace API.Controllers
         /// <response code="400">Ugyldig rolle - rollen eksisterer ikke.</response>
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpGet("role/{roleName}")]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsersByRole(string roleName)
+        public async Task<ActionResult<IEnumerable<UserGetDto>>> GetUsersByRole(string roleName)
         {
             try
             {
@@ -513,8 +515,10 @@ namespace API.Controllers
                     .Where(u => u.RoleId == role.Id)
                     .ToListAsync();
 
+                var userDtos = UserMapping.ToUserGetDtos(users);
+
                 _logger.LogInformation("Hentet {UserCount} brugere med rolle {RoleName}", users.Count, roleName);
-                return users;
+                return Ok(userDtos);
             }
             catch (Exception ex)
             {
