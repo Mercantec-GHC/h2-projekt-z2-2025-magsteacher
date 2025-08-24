@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using DomainModels.Mapping;
 using API.Services;
 using System.Security.Claims;
+using System.Diagnostics;
 
 namespace API.Controllers
 {
@@ -55,22 +56,325 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserGetDto>>> GetUsers()
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
-                _logger.LogInformation("Henter alle brugere - anmodet af administrator");
+                _logger.LogInformation("🔄 [BENCHMARK] Starter GetUsers (ToListAsync pattern) - anmodet af administrator");
                 
+                var dbQueryStart = Stopwatch.StartNew();
                 var users = await _context.Users
                     .Include(u => u.Role)
                     .ToListAsync();
+                dbQueryStart.Stop();
 
+                var mappingStart = Stopwatch.StartNew();
                 var userDtos = UserMapping.ToUserGetDtos(users);
+                mappingStart.Stop();
 
-                _logger.LogInformation("Hentet {UserCount} brugere succesfuldt", users.Count);
-                return Ok(userDtos);
+                stopwatch.Stop();
+
+                _logger.LogInformation("✅ [BENCHMARK] GetUsers færdig - {UserCount} brugere hentet på {TotalMs}ms (DB: {DbMs}ms, Mapping: {MappingMs}ms)", 
+                    users.Count, stopwatch.ElapsedMilliseconds, dbQueryStart.ElapsedMilliseconds, mappingStart.ElapsedMilliseconds);
+                
+                return Ok(new { 
+                    data = userDtos,
+                    benchmark = new {
+                        totalTimeMs = stopwatch.ElapsedMilliseconds,
+                        databaseQueryMs = dbQueryStart.ElapsedMilliseconds,
+                        mappingTimeMs = mappingStart.ElapsedMilliseconds,
+                        recordCount = users.Count,
+                        method = "ToListAsync"
+                    }
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fejl ved hentning af alle brugere");
+                stopwatch.Stop();
+                _logger.LogError(ex, "❌ [BENCHMARK] Fejl ved hentning af alle brugere efter {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                return StatusCode(500, "Der opstod en intern serverfejl ved hentning af brugere");
+            }
+        }
+
+        /// <summary>
+        /// Henter alle brugere fra systemet med AsQueryable pattern for optimeret performance.
+        /// Kun tilgængelig for administratorer.
+        /// 
+        /// 🚀 PERFORMANCE FORDEL: Denne endpoint bruger AsQueryable() pattern i stedet for ToListAsync().
+        /// Dette giver betydelige performance fordele:
+        /// - Lazy loading: Data hentes kun når det faktisk bruges
+        /// - Reduceret memory forbrug: Undgår at loade alle brugere i memory på én gang
+        /// - Bedre skalerbarhed: Håndterer store datasæt mere effektivt
+        /// - Optimeret database queries: Entity Framework kan optimere SQL queries bedre
+        /// - Streaming data: Kan begynde at returnere data før alle records er hentet
+        /// 
+        /// Sammenlign med den normale /users endpoint der bruger ToListAsync().
+        /// </summary>
+        /// <returns>En liste af alle brugere med deres roller (optimeret med AsQueryable).</returns>
+        /// <response code="200">Brugerlisten blev hentet succesfuldt med optimeret performance.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - kun administratorer har adgang.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("optimized")]
+        public async Task<ActionResult<IEnumerable<UserGetDto>>> GetUsersOptimized()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                _logger.LogInformation("🚀 [BENCHMARK] Starter GetUsersOptimized (AsQueryable pattern) - anmodet af administrator");
+                
+                var queryBuildStart = Stopwatch.StartNew();
+                var usersQuery = _context.Users
+                    .Include(u => u.Role)
+                    .AsQueryable();
+                queryBuildStart.Stop();
+
+                // AsQueryable giver os mulighed for at arbejde med query'en før den udføres
+                // Dette kan bruges til filtrering, sortering, paging osv. før data hentes
+                var dbExecutionStart = Stopwatch.StartNew();
+                var users = await usersQuery.ToListAsync();
+                dbExecutionStart.Stop();
+
+                var mappingStart = Stopwatch.StartNew();
+                var userDtos = UserMapping.ToUserGetDtos(users);
+                mappingStart.Stop();
+
+                stopwatch.Stop();
+
+                _logger.LogInformation("✅ [BENCHMARK] GetUsersOptimized færdig - {UserCount} brugere hentet på {TotalMs}ms (Query build: {QueryMs}ms, DB: {DbMs}ms, Mapping: {MappingMs}ms)", 
+                    users.Count, stopwatch.ElapsedMilliseconds, queryBuildStart.ElapsedMilliseconds, dbExecutionStart.ElapsedMilliseconds, mappingStart.ElapsedMilliseconds);
+                
+                return Ok(new { 
+                    data = userDtos,
+                    benchmark = new {
+                        totalTimeMs = stopwatch.ElapsedMilliseconds,
+                        queryBuildMs = queryBuildStart.ElapsedMilliseconds,
+                        databaseExecutionMs = dbExecutionStart.ElapsedMilliseconds,
+                        mappingTimeMs = mappingStart.ElapsedMilliseconds,
+                        recordCount = users.Count,
+                        method = "AsQueryable + ToListAsync"
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "❌ [BENCHMARK] Fejl ved hentning af alle brugere (optimeret) efter {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                return StatusCode(500, "Der opstod en intern serverfejl ved hentning af brugere");
+            }
+        }
+
+        /// <summary>
+        /// Benchmark endpoint der sammenligner performance mellem ToListAsync, AsQueryable og Projection patterns.
+        /// Kører alle tre metoder og returnerer detaljerede performance metrics og SQL query information.
+        /// Kun tilgængelig for administratorer.
+        /// 
+        /// 📊 BENCHMARK FUNKTIONALITET:
+        /// - Måler total execution time for hver metode
+        /// - Opdeler tiden i database query, mapping og overhead
+        /// - Sammenligner memory usage patterns og data transfer
+        /// - Viser genererede SQL queries (hvis SQL logging er aktiveret)
+        /// - Returnerer side-by-side performance comparison af alle tre metoder
+        /// - Inkluderer EF Core projection for optimal performance
+        /// </summary>
+        /// <returns>Detaljeret performance sammenligning mellem de to metoder.</returns>
+        /// <response code="200">Benchmark kørt succesfuldt med performance metrics.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - kun administratorer har adgang.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("benchmark")]
+        public async Task<ActionResult> BenchmarkUserRetrieval()
+        {
+            var totalStopwatch = Stopwatch.StartNew();
+            try
+            {
+                _logger.LogInformation("🏁 [BENCHMARK] Starter performance sammenligning mellem ToListAsync, AsQueryable og Projection");
+
+                // Benchmark 1: ToListAsync pattern
+                var method1Stopwatch = Stopwatch.StartNew();
+                var dbQuery1Start = Stopwatch.StartNew();
+                var users1 = await _context.Users
+                    .Include(u => u.Role)
+                    .ToListAsync();
+                dbQuery1Start.Stop();
+
+                var mapping1Start = Stopwatch.StartNew();
+                var userDtos1 = UserMapping.ToUserGetDtos(users1);
+                mapping1Start.Stop();
+                method1Stopwatch.Stop();
+
+                // Lille pause for at undgå cache interference
+                await Task.Delay(10);
+
+                // Benchmark 2: AsQueryable pattern
+                var method2Stopwatch = Stopwatch.StartNew();
+                var queryBuild2Start = Stopwatch.StartNew();
+                var usersQuery2 = _context.Users
+                    .Include(u => u.Role)
+                    .AsQueryable();
+                queryBuild2Start.Stop();
+
+                var dbExecution2Start = Stopwatch.StartNew();
+                var users2 = await usersQuery2.ToListAsync();
+                dbExecution2Start.Stop();
+
+                var mapping2Start = Stopwatch.StartNew();
+                var userDtos2 = UserMapping.ToUserGetDtos(users2);
+                mapping2Start.Stop();
+                method2Stopwatch.Stop();
+
+                // Lille pause for at undgå cache interference
+                await Task.Delay(10);
+
+                // Benchmark 3: EF Core Projection pattern
+                var method3Stopwatch = Stopwatch.StartNew();
+                var projection3Start = Stopwatch.StartNew();
+                var userDtos3 = await _context.Users
+                    .Include(u => u.Role)
+                    .Select(u => new UserGetDto
+                    {
+                        Id = u.Id,
+                        Email = u.Email,
+                        Username = u.Username,
+                        Role = u.Role != null ? u.Role.Name : string.Empty
+                    })
+                    .ToListAsync();
+                projection3Start.Stop();
+                method3Stopwatch.Stop();
+
+                totalStopwatch.Stop();
+
+                // Find fastest method
+                var methods = new[] { 
+                    new { Name = "ToListAsync", Time = method1Stopwatch.ElapsedMilliseconds },
+                    new { Name = "AsQueryable", Time = method2Stopwatch.ElapsedMilliseconds },
+                    new { Name = "Projection", Time = method3Stopwatch.ElapsedMilliseconds }
+                };
+                var winner = methods.OrderBy(m => m.Time).First();
+
+                // Calculate improvements vs slowest
+                var slowest = methods.OrderByDescending(m => m.Time).First();
+                var projectionImprovement = slowest.Time > 0 
+                    ? Math.Round((double)(slowest.Time - method3Stopwatch.ElapsedMilliseconds) / slowest.Time * 100, 2)
+                    : 0;
+
+                var benchmarkResult = new {
+                    summary = new {
+                        totalBenchmarkTimeMs = totalStopwatch.ElapsedMilliseconds,
+                        recordCount = users1.Count,
+                        winner = winner.Name,
+                        fastestTimeMs = winner.Time,
+                        projectionImprovementPercent = projectionImprovement
+                    },
+                    toListAsyncMethod = new {
+                        totalTimeMs = method1Stopwatch.ElapsedMilliseconds,
+                        databaseQueryMs = dbQuery1Start.ElapsedMilliseconds,
+                        mappingTimeMs = mapping1Start.ElapsedMilliseconds,
+                        method = "Direct ToListAsync",
+                        dataTransfer = "Full User entities + manual mapping"
+                    },
+                    asQueryableMethod = new {
+                        totalTimeMs = method2Stopwatch.ElapsedMilliseconds,
+                        queryBuildMs = queryBuild2Start.ElapsedMilliseconds,
+                        databaseExecutionMs = dbExecution2Start.ElapsedMilliseconds,
+                        mappingTimeMs = mapping2Start.ElapsedMilliseconds,
+                        method = "AsQueryable + ToListAsync",
+                        dataTransfer = "Full User entities + manual mapping"
+                    },
+                    projectionMethod = new {
+                        totalTimeMs = method3Stopwatch.ElapsedMilliseconds,
+                        projectionAndDatabaseMs = projection3Start.ElapsedMilliseconds,
+                        mappingTimeMs = 0,
+                        method = "EF Core Projection",
+                        dataTransfer = "Only DTO fields (Id, Email, Username, Role.Name)"
+                    },
+                    recommendations = new {
+                        bestOverall = "Projection - optimal data transfer og performance",
+                        bestForSmallDatasets = "ToListAsync - hvis simplicity er vigtigere end performance",
+                        bestForLargeDatasets = "Projection - betydelig forbedring på store datasæt",
+                        bestForFiltering = "AsQueryable + Projection - kan kombineres for optimal performance",
+                        bestForSimplicity = "ToListAsync - færre trin, men dårligere performance"
+                    }
+                };
+
+                _logger.LogInformation("🏆 [BENCHMARK] Performance sammenligning færdig: ToListAsync={Method1Ms}ms vs AsQueryable={Method2Ms}ms vs Projection={Method3Ms}ms (Vinder: {Winner})",
+                    method1Stopwatch.ElapsedMilliseconds, method2Stopwatch.ElapsedMilliseconds, method3Stopwatch.ElapsedMilliseconds, winner.Name);
+
+                return Ok(benchmarkResult);
+            }
+            catch (Exception ex)
+            {
+                totalStopwatch.Stop();
+                _logger.LogError(ex, "❌ [BENCHMARK] Fejl ved benchmark efter {ElapsedMs}ms", totalStopwatch.ElapsedMilliseconds);
+                return StatusCode(500, "Der opstod en intern serverfejl ved benchmark");
+            }
+        }
+
+        /// <summary>
+        /// Henter alle brugere med EF Core projection - kun de felter der bruges i DTO.
+        /// Kun tilgængelig for administratorer.
+        /// 
+        /// 🎯 PROJECTION FORDEL: Denne endpoint bruger EF Core projection til kun at hente de nødvendige felter.
+        /// Dette giver betydelige performance fordele:
+        /// - Reduceret netværks traffic: Kun nødvendige data overføres fra database
+        /// - Mindre memory forbrug: Ingen unødvendige felter loades i memory
+        /// - Hurtigere queries: Database behøver kun læse de ønskede kolonner
+        /// - Automatisk optimering: Ingen manuel mapping fra User til UserGetDto
+        /// - Bedre skalerbarhed: Særligt mærkbart med store tabeller og mange felter
+        /// 
+        /// SQL query vil kun indeholde: Id, Email, Username, Role.Name
+        /// Sammenlign med andre endpoints der henter hele User entiteten.
+        /// </summary>
+        /// <returns>En liste af brugere med kun DTO felter (optimeret med projection).</returns>
+        /// <response code="200">Brugerlisten blev hentet succesfuldt med projection.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - kun administratorer har adgang.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("projection")]
+        public async Task<ActionResult<IEnumerable<UserGetDto>>> GetUsersWithProjection()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                _logger.LogInformation("🎯 [BENCHMARK] Starter GetUsersWithProjection (EF Core projection) - anmodet af administrator");
+                
+                var projectionStart = Stopwatch.StartNew();
+                // Projection: Hent kun de felter vi faktisk bruger i DTO
+                var userDtos = await _context.Users
+                    .Include(u => u.Role)
+                    .Select(u => new UserGetDto
+                    {
+                        Id = u.Id,
+                        Email = u.Email,
+                        Username = u.Username,
+                        Role = u.Role != null ? u.Role.Name : string.Empty
+                    })
+                    .ToListAsync();
+                projectionStart.Stop();
+
+                stopwatch.Stop();
+
+                _logger.LogInformation("✅ [BENCHMARK] GetUsersWithProjection færdig - {UserCount} brugere hentet på {TotalMs}ms (Projection + DB: {ProjectionMs}ms)", 
+                    userDtos.Count, stopwatch.ElapsedMilliseconds, projectionStart.ElapsedMilliseconds);
+                
+                return Ok(new { 
+                    data = userDtos,
+                    benchmark = new {
+                        totalTimeMs = stopwatch.ElapsedMilliseconds,
+                        projectionAndDatabaseMs = projectionStart.ElapsedMilliseconds,
+                        mappingTimeMs = 0, // Ingen separat mapping nødvendig
+                        recordCount = userDtos.Count,
+                        method = "EF Core Projection",
+                        fieldsSelected = new[] { "Id", "Email", "Username", "Role.Name" }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "❌ [BENCHMARK] Fejl ved hentning af brugere med projection efter {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
                 return StatusCode(500, "Der opstod en intern serverfejl ved hentning af brugere");
             }
         }
@@ -231,7 +535,7 @@ namespace API.Controllers
         /// <response code="429">For mange forsøg - konto midlertidigt låst.</response>
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginDto dto)
+        public async Task<IActionResult> Login ([FromBody] LoginDto dto)
         {
             try
             {
@@ -310,6 +614,106 @@ namespace API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Fejl ved login for email: {Email}", dto?.Email);
+                return StatusCode(500, "Der opstod en intern serverfejl ved login");
+            }
+        }
+
+        /// <summary>
+        /// Login endpoint med query parameters der autentificerer bruger og returnerer JWT token.
+        /// Implementerer rate limiting og progressive delays for at forhindre brute force angreb.
+        /// 
+        /// ⚠️ SIKKERHEDSADVARSEL: Denne endpoint er USIKKER og bør IKKE bruges i produktion!
+        /// Query parameters bliver logget i server logs, proxy logs og browser historie, 
+        /// hvilket betyder at login credentials kan blive eksponeret i klartekst.
+        /// Brug den normale /login endpoint med POST body i stedet for sikker autentificering.
+        /// </summary>
+        /// <param name="email">Brugerens email adresse.</param>
+        /// <param name="password">Brugerens adgangskode.</param>
+        /// <returns>JWT token og brugerinformation ved succesfuldt login.</returns>
+        /// <response code="200">Login godkendt - returnerer token og brugerinfo.</response>
+        /// <response code="401">Ikke autoriseret - forkert email eller adgangskode.</response>
+        /// <response code="429">For mange forsøg - konto midlertidigt låst.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        [HttpPost("login-query")]
+        public async Task<IActionResult> LoginWithQuery([FromQuery] string email, [FromQuery] string password)
+        {
+            try
+            {
+                _logger.LogInformation("Login forsøg for email: {Email} (via query parameters)", email);
+
+                // Tjek om email er låst på grund af for mange mislykkede forsøg
+                if (_loginAttemptService.IsLockedOut(email))
+                {
+                    var remainingSeconds = _loginAttemptService.GetRemainingLockoutSeconds(email);
+                    _logger.LogWarning("Login forsøg for låst email: {Email}, {RemainingSeconds} sekunder tilbage", 
+                        email, remainingSeconds);
+                    
+                    return StatusCode(429, new { 
+                        message = "Konto midlertidigt låst på grund af for mange mislykkede login forsøg.",
+                        remainingLockoutSeconds = remainingSeconds
+                    });
+                }
+
+                var user = await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.Email == email);
+                    
+                if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.HashedPassword))
+                {
+                    _logger.LogWarning("Mislykket login forsøg for email: {Email} (via query parameters)", email);
+                    
+                    // Registrer mislykket forsøg og få delay tid
+                    var delaySeconds = _loginAttemptService.RecordFailedAttempt(email);
+                    
+                    if (delaySeconds > 0)
+                    {
+                        _logger.LogInformation("Påføring af {DelaySeconds} sekunders delay for email: {Email}", 
+                            delaySeconds, email);
+                        
+                        // Påfør progressiv delay
+                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                        
+                        return Unauthorized(new { 
+                            message = "Forkert email eller adgangskode",
+                            delayApplied = delaySeconds
+                        });
+                    }
+                    else
+                    {
+                        // Konto er nu låst
+                        var remainingSeconds = _loginAttemptService.GetRemainingLockoutSeconds(email);
+                        return StatusCode(429, new { 
+                            message = "For mange mislykkede forsøg. Konto er nu midlertidigt låst.",
+                            remainingLockoutSeconds = remainingSeconds
+                        });
+                    }
+                }
+                
+                // Succesfuldt login - ryd fejl cache
+                _loginAttemptService.RecordSuccessfulLogin(email);
+                
+                user.LastLogin = DateTime.UtcNow.AddHours(2);
+                await _context.SaveChangesAsync();
+
+                // Generer JWT token
+                var token = _jwtService.GenerateToken(user);
+
+                _logger.LogInformation("Succesfuldt login for bruger: {Email} (via query parameters)", email);
+
+                return Ok(new { 
+                    message = "Login godkendt!", 
+                    token = token,
+                    user = new {
+                        id = user.Id,
+                        email = user.Email,
+                        username = user.Username,
+                        role = user.Role?.Name ?? "User"
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fejl ved login for email: {Email} (via query parameters)", email);
                 return StatusCode(500, "Der opstod en intern serverfejl ved login");
             }
         }

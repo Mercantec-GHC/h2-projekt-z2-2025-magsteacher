@@ -1,11 +1,26 @@
 using Microsoft.AspNetCore.Mvc;
+using API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
+    /// <summary>
+    /// Controller til håndtering af systemstatus og sundhedstjek.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class StatusController : ControllerBase
     {
+        private readonly AppDBContext _context;
+
+        /// <summary>
+        /// Initialiserer en ny instans af StatusController.
+        /// </summary>
+        /// <param name="context">Database kontekst til adgang til data.</param>
+        public StatusController(AppDBContext context)
+        {
+            _context = context;
+        }
         /// <summary>
         /// Tjekker om API'en kører korrekt.
         /// </summary>
@@ -24,22 +39,18 @@ namespace API.Controllers
         /// <response code="200">Database er kørende eller fejlbesked gives.</response>
     
         [HttpGet("dbhealthcheck")]
-        public IActionResult DBHealthCheck()
+        public async Task<IActionResult> DBHealthCheck()
         {
-            // Indtil vi har opsat EFCore, returnerer vi bare en besked
-
-            try {
-                // using (var context = new ApplicationDbContext())
-                // {
-                //     context.Database.CanConnect();
-                // }
-                throw new Exception("I har endnu ikke lært at opsætte EFCore! Det kommer senere!");
+            try 
+            {
+                // Tjek om vi kan forbinde til databasen
+                await _context.Database.CanConnectAsync();
+                return Ok(new { status = "OK", message = "Database er kørende!" });
             }
             catch (Exception ex)
             {
                 return Ok(new { status = "Error", message = "Fejl ved forbindelse til database: " + ex.Message });
             }
-            return Ok(new { status = "OK", message = "Database er kørende!" });
         }
 
         /// <summary>
@@ -51,6 +62,40 @@ namespace API.Controllers
         public IActionResult Ping()
         {
             return Ok(new { status = "OK", message = "Pong 🏓" });
+        }
+
+        /// <summary>
+        /// Henter antal rækker i alle hovedtabeller.
+        /// </summary>
+        /// <returns>Antal rækker i Hotels, Users, Rooms og Bookings tabellerne.</returns>
+        /// <response code="200">Returnerer antal rækker i hver tabel.</response>
+        [HttpGet("tablecount")]
+        public async Task<IActionResult> GetTableCount()
+        {
+            try
+            {
+                var hotelCount = await _context.Hotels.CountAsync();
+                var userCount = await _context.Users.CountAsync();
+                var roomCount = await _context.Rooms.CountAsync();
+                var bookingCount = await _context.Bookings.CountAsync();
+
+                return Ok(new 
+                { 
+                    status = "OK",
+                    hotels = hotelCount,
+                    users = userCount,
+                    rooms = roomCount,
+                    bookings = bookingCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new 
+                { 
+                    status = "Error", 
+                    message = "Fejl ved hentning af tabel antal: " + ex.Message 
+                });
+            }
         }
     }
 }
