@@ -29,6 +29,21 @@ public class Program
             Console.WriteLine($"APIService BaseAddress: {client.BaseAddress}");
         });
 
-        await builder.Build().RunAsync();
+        // Registrer HttpClient til AuthenticationService (shared med APIService)
+        builder.Services.AddHttpClient<AuthenticationService>(client =>
+        {
+            client.BaseAddress = new Uri(apiEndpoint);
+        });
+
+        // Registrer AuthenticationService som Scoped service
+        builder.Services.AddScoped<AuthenticationService>();
+
+        var app = builder.Build();
+
+        // Initialiser authentication state
+        var authService = app.Services.GetRequiredService<AuthenticationService>();
+        await authService.InitializeAsync();
+
+        await app.RunAsync();
     }
 }

@@ -2,10 +2,10 @@
 @using Blazor.Services
 @inject APIService ApiService
 
-<div class="card shadow-sm mt-4">
+<div class="card vacation-search-card shadow-sm mt-4">
     <div class="card-body">
-        <h5 class="card-title">
-            <i class="bi bi-search text-primary"></i> Søg efter ledige rum
+        <h5 class="card-title vacation-search-title">
+            <i class="bi bi-geo-alt-fill text-primary me-2"></i>🏖️ Find dit drømmeferiested
         </h5>
 
         <EditForm Model="@searchQuery" OnValidSubmit="@HandleSearch">
@@ -15,7 +15,7 @@
             <div class="row">
                 <!-- Hotel Selection -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Hotel</label>
+                    <label class="form-label">🏨 Vælg destination</label>
                     <select @bind="searchQuery.HotelId" class="form-select" required>
                         <option value="">Vælg hotel</option>
                         @if (hotels != null)
@@ -30,7 +30,7 @@
 
                 <!-- Number of Guests -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Antal gæster</label>
+                    <label class="form-label">👥 Antal rejsende</label>
                     <input type="number" @bind="searchQuery.NumberOfGuests" class="form-control" min="1" max="10" required />
                 </div>
             </div>
@@ -38,13 +38,13 @@
             <div class="row">
                 <!-- Check-in Date -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Check-in dato</label>
+                    <label class="form-label">📅 Ankomst dato</label>
                     <input type="date" @bind="searchQuery.CheckInDate" class="form-control" required />
                 </div>
 
                 <!-- Check-out Date -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Check-out dato</label>
+                    <label class="form-label">🛫 Afrejse dato</label>
                     <input type="date" @bind="searchQuery.CheckOutDate" class="form-control" required />
                 </div>
             </div>
@@ -161,7 +161,7 @@
                     else
                     {
                         <i class="bi bi-search me-2"></i>
-                        <span>Søg efter ledige rum</span>
+                        <span>🔍 Find min drømmeferie</span>
                     }
                 </button>
             </div>

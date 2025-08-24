@@ -7,22 +7,52 @@ namespace Blazor.Services
     public partial class APIService
     {
         // User authentication methods
-        public async Task<string?> LoginAsync(LoginDto loginDto)
+        public async Task<LoginApiResult> LoginAsync(LoginDto loginDto)
         {
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/users/login", loginDto);
+                
                 if (response.IsSuccessStatusCode)
                 {
-                    var result = await response.Content.ReadAsStringAsync();
-                    return result; // JWT token
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+
+                    return new LoginApiResult 
+                    { 
+                        Success = true, 
+                        Response = loginResponse,
+                        StatusCode = response.StatusCode
+                    };
                 }
-                return null;
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+                    
+                    return new LoginApiResult 
+                    { 
+                        Success = false, 
+                        ErrorResponse = errorResponse,
+                        StatusCode = response.StatusCode
+                    };
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Fejl ved login: " + ex.Message);
-                return null;
+                return new LoginApiResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = ex.Message,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError
+                };
             }
         }
 
@@ -99,5 +129,47 @@ namespace Blazor.Services
             // This would typically clear the JWT token from storage
             // Implementation depends on how you store the token
         }
+    }
+
+    // Response models for API calls
+    public class LoginApiResult
+    {
+        public bool Success { get; set; }
+        public LoginResponse? Response { get; set; }
+        public ErrorResponse? ErrorResponse { get; set; }
+        public string? ErrorMessage { get; set; }
+        public System.Net.HttpStatusCode StatusCode { get; set; }
+    }
+
+    public class LoginResponse
+    {
+        public string Message { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public AuthUserInfo User { get; set; } = new();
+    }
+
+    public class ErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
+        public int RemainingLockoutSeconds { get; set; }
+        public int DelayApplied { get; set; }
+    }
+
+    public class AuthUserInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class LoginResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public AuthUserInfo? User { get; set; }
+        public string? Token { get; set; }
+        public int RemainingLockoutSeconds { get; set; }
+        public int DelayApplied { get; set; }
     }
 }
