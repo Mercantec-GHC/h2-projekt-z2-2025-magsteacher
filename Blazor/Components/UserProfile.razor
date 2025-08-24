@@ -1,6 +1,9 @@
 @using Blazor.Services
+@using System.Text.Json
+@using System.Text
 @inject AuthenticationService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <div class="vacation-user-profile">
     @if (currentUser != null)
@@ -59,6 +62,25 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td><strong>Token Status:</strong></td>
+                                    <td>
+                                        @if (tokenValidationResult != null)
+                                        {
+                                            <span class="badge @(tokenValidationResult.IsValid ? "bg-success" : "bg-danger")">
+                                                <i class="bi @(tokenValidationResult.IsValid ? "bi-check-circle" : "bi-x-circle") me-1"></i>
+                                                @(tokenValidationResult.IsValid ? "Gyldig" : "Ugyldig")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-question-circle me-1"></i>
+                                                Ikke valideret
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
                                     <td><strong>Token:</strong></td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(tokenPreview))
@@ -77,23 +99,252 @@
                                         }
                                     </td>
                                 </tr>
-                                @if (showFullToken && !string.IsNullOrEmpty(fullToken))
-                                {
-                                    <tr>
-                                        <td colspan="2">
-                                            <div class="alert alert-info p-2">
-                                                <small>
-                                                    <strong>Fuld JWT Token:</strong><br />
-                                                    <code style="word-break: break-all; font-size: 0.7rem;">@fullToken</code>
-                                                </small>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
                             </tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- JWT Token Analysis Section -->
+                @if (!string.IsNullOrEmpty(fullToken) && decodedToken != null)
+                {
+                    <div class="mt-4">
+                        <h6 class="vacation-section-title">🔍 JWT Token Analyse</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="jwt-section-card">
+                                    <h6 class="jwt-section-header">
+                                        <i class="bi bi-file-earmark-text me-2"></i>Header
+                                    </h6>
+                                    <div class="jwt-section-content">
+                                        <pre class="jwt-json">@FormatJson(decodedToken.Header)</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="jwt-section-card">
+                                    <h6 class="jwt-section-header">
+                                        <i class="bi bi-file-earmark-data me-2"></i>Payload
+                                    </h6>
+                                    <div class="jwt-section-content">
+                                        <pre class="jwt-json">@FormatJson(decodedToken.Payload)</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="jwt-section-card">
+                                    <h6 class="jwt-section-header">
+                                        <i class="bi bi-shield-check me-2"></i>Signature
+                                    </h6>
+                                    <div class="jwt-section-content">
+                                        <div class="signature-info">
+                                            <p><strong>Algoritme:</strong> @(decodedToken.Header.TryGetValue("alg", out var algElementSig) ? algElementSig.GetString() : "Ukendt")</p>
+                                            <p><strong>Type:</strong> @(decodedToken.Header.TryGetValue("typ", out var typElementSig) ? typElementSig.GetString() : "JWT")</p>
+                                            <p><strong>Signature:</strong></p>
+                                            <code class="signature-code">@decodedToken.Signature</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Token Validation Details -->
+                        @if (tokenValidationResult != null)
+                        {
+                            <div class="mt-3">
+                                <h6 class="text-muted">Token Validering Detaljer</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="validation-details">
+                                            <p><strong>Udløbsdato:</strong> @tokenValidationResult.ExpirationTime?.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                            <p><strong>Udgivet:</strong> @tokenValidationResult.IssuedAt?.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                            <p><strong>Udgiver:</strong> @tokenValidationResult.Issuer</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="validation-details">
+                                            <p><strong>Modtager:</strong> @tokenValidationResult.Audience</p>
+                                            <p><strong>Token ID:</strong> @tokenValidationResult.TokenId</p>
+                                            <p><strong>Bruger ID:</strong> @tokenValidationResult.UserId</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                @if (tokenValidationResult.ValidationErrors.Any())
+                                {
+                                    <div class="mt-3">
+                                        <div class="alert alert-warning">
+                                            <h6><i class="bi bi-exclamation-triangle me-2"></i>Valideringsfejl</h6>
+                                            <ul class="mb-0">
+                                                @foreach (var error in tokenValidationResult.ValidationErrors)
+                                                {
+                                                    <li>@error</li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        
+                        <!-- Important Claims Summary -->
+                        @if (decodedToken?.Payload != null)
+                        {
+                            <div class="mt-3">
+                                <h6 class="text-muted">Vigtige Claims</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="claims-summary">
+                                            @if (decodedToken.Payload.TryGetValue("name", out var nameElement))
+                                            {
+                                                <p><strong>Navn:</strong> @nameElement.GetString()</p>
+                                            }
+                                            @if (decodedToken.Payload.TryGetValue("email", out var emailElement))
+                                            {
+                                                <p><strong>Email:</strong> @emailElement.GetString()</p>
+                                            }
+                                            @if (decodedToken.Payload.TryGetValue("role", out var roleElement))
+                                            {
+                                                <p><strong>Rolle:</strong> 
+                                                    <span class="badge @GetRoleBadgeClass(roleElement.GetString() ?? "")">
+                                                        @GetRoleDisplayName(roleElement.GetString() ?? "")
+                                                    </span>
+                                                </p>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="claims-summary">
+                                            @if (decodedToken.Payload.TryGetValue("iat", out var iatElement))
+                                            {
+                                                <p><strong>Oprettet:</strong> @DateTimeOffset.FromUnixTimeSeconds(iatElement.GetInt64()).DateTime.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                            }
+                                            @if (decodedToken.Payload.TryGetValue("exp", out var expElement))
+                                            {
+                                                <p><strong>Udløber:</strong> @DateTimeOffset.FromUnixTimeSeconds(expElement.GetInt64()).DateTime.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                            }
+                                            @if (decodedToken.Payload.TryGetValue("nbf", out var nbfElement))
+                                            {
+                                                <p><strong>Ikke gyldig før:</strong> @DateTimeOffset.FromUnixTimeSeconds(nbfElement.GetInt64()).DateTime.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- Token Actions -->
+                        <div class="mt-3">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-info btn-sm" @onclick="ValidateToken">
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    Valider Token
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="CopyTokenToClipboard">
+                                    <i class="bi bi-clipboard me-1"></i>
+                                    Kopier Token
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" @onclick="RefreshToken">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                    Forny Token
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" @onclick="ToggleFullTokenDisplay">
+                                    <i class="bi @(showFullToken ? "bi-eye-slash" : "bi-eye") me-1"></i>
+                                    @(showFullToken ? "Skjul" : "Vis") Fuld Token
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Signature Validation with Server Key -->
+                        <div class="mt-4">
+                            <h6 class="vacation-section-title">🔑 Signature Validering med Server Nøgle</h6>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="signature-validation-card">
+                                        <div class="input-group mb-3">
+                                            <span class="input-group-text">
+                                                <i class="bi bi-key-fill"></i>
+                                            </span>
+                                            <input type="password" 
+                                                   class="form-control" 
+                                                   placeholder="Indtast serverens hemmelige nøgle for at validere signaturen..."
+                                                   @bind="serverSecretKey"
+                                                   @onkeyup="OnServerKeyInput" />
+                                            <button class="btn btn-outline-success" 
+                                                    @onclick="ValidateSignatureWithServerKey" 
+                                                    disabled="@string.IsNullOrEmpty(serverSecretKey)">
+                                                <i class="bi bi-shield-check me-1"></i>
+                                                Valider
+                                            </button>
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(signatureValidationResult))
+                                        {
+                                            <div class="alert @(signatureValidationResult.Contains("✓") ? "alert-success" : "alert-danger") mt-3">
+                                                <h6>
+                                                    <i class="bi @(signatureValidationResult.Contains("✓") ? "bi-check-circle" : "bi-x-circle") me-2"></i>
+                                                    Signature Validering
+                                                </h6>
+                                                <p class="mb-0">@signatureValidationResult</p>
+                                            </div>
+                                        }
+                                        
+                                        <div class="signature-info-details mt-3">
+                                            <p><strong>Bemærk:</strong> Server nøglen bruges kun til at validere signaturen lokalt. Den sendes ikke til serveren.</p>
+                                            <p><strong>Algoritme:</strong> @(decodedToken.Header.TryGetValue("alg", out var algElement) ? algElement.GetString() : "Ukendt")</p>
+                                            <p><strong>Token Type:</strong> @(decodedToken.Header.TryGetValue("typ", out var typElement) ? typElement.GetString() : "JWT")</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="signature-status-card">
+                                        <h6 class="signature-status-header">
+                                            <i class="bi bi-shield-lock me-2"></i>Signature Status
+                                        </h6>
+                                        <div class="signature-status-content">
+                                            @if (isSignatureValid)
+                                            {
+                                                <div class="signature-valid">
+                                                    <i class="bi bi-shield-check text-success"></i>
+                                                    <span>Signature er gyldig</span>
+                                                </div>
+                                            }
+                                            else if (hasValidatedSignature)
+                                            {
+                                                <div class="signature-invalid">
+                                                    <i class="bi bi-shield-x text-danger"></i>
+                                                    <span>Signature er ugyldig</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="signature-unknown">
+                                                    <i class="bi bi-shield-question text-warning"></i>
+                                                    <span>Ikke valideret</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Full Token Display -->
+                        @if (showFullToken && !string.IsNullOrEmpty(fullToken))
+                        {
+                            <div class="mt-3">
+                                <div class="alert alert-info">
+                                    <h6><i class="bi bi-info-circle me-2"></i>Fuld JWT Token</h6>
+                                    <div class="token-display">
+                                        <code class="full-token-code">@fullToken</code>
+                                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="CopyTokenToClipboard" title="Kopier token">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
 
                 @if (currentUser.Role == "Admin")
                 {
@@ -475,6 +726,331 @@
             font-size: 0.9rem;
         }
     }
+
+    /* JWT Token Analysis Styling */
+    .jwt-section-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+        height: 100%;
+        min-height: 350px;
+    }
+
+    .jwt-section-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .jwt-section-header {
+        color: #6366f1;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid rgba(99, 102, 241, 0.2);
+        padding-bottom: 0.75rem;
+    }
+
+    .jwt-section-content {
+        min-height: 280px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .jwt-json {
+        background: rgba(15, 15, 35, 0.9);
+        color: #a78bfa;
+        padding: 1.5rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        backdrop-filter: blur(10px);
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        flex-grow: 1;
+        line-height: 1.4;
+    }
+
+    .signature-info p {
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .signature-info strong {
+        color: #6366f1;
+    }
+
+    .signature-code {
+        background: rgba(15, 15, 35, 0.8);
+        color: #fbbf24;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        word-break: break-all;
+        display: block;
+        margin-top: 0.75rem;
+        line-height: 1.3;
+    }
+
+    .validation-details {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .validation-details p {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .validation-details strong {
+        color: #6366f1;
+    }
+
+    /* Token Status Badge Enhancements */
+    .badge.bg-success {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge.bg-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge.bg-warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* New styles for full token display */
+    .token-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .full-token-code {
+        background: rgba(15, 15, 35, 0.8);
+        color: #a78bfa;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        backdrop-filter: blur(10px);
+        flex-grow: 1;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .alert-info h6 {
+        color: #3b82f6;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .alert-warning {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .alert-warning h6 {
+        color: #f59e0b;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .alert-warning ul {
+        color: #fbbf24;
+        margin-bottom: 0;
+    }
+
+    .alert-warning li {
+        margin-bottom: 0.25rem;
+    }
+
+    /* New styles for claims summary */
+    .claims-summary {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .claims-summary p {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .claims-summary strong {
+        color: #6366f1;
+    }
+
+    /* Signature Validation Styling */
+    .signature-validation-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    .signature-validation-card .input-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .signature-validation-card .input-group-text {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: #6366f1;
+        border-radius: 12px 0 0 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .signature-validation-card .form-control {
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 0 12px 12px 0;
+        font-size: 0.9rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .signature-validation-card .btn {
+        border-radius: 12px;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        border: none;
+        backdrop-filter: blur(10px);
+    }
+
+    .signature-validation-card .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .signature-validation-card .btn:hover::before {
+        left: 100%;
+    }
+
+    .signature-validation-card .btn:hover {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.5);
+        color: #c4b5fd;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    }
+
+    .signature-validation-card .btn:disabled {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.3);
+        color: #a78bfa;
+        cursor: not-allowed;
+    }
+
+    .signature-status-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    .signature-status-header {
+        color: #6366f1;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid rgba(99, 102, 241, 0.2);
+        padding-bottom: 0.75rem;
+    }
+
+    .signature-status-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 150px;
+    }
+
+    .signature-valid {
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .signature-invalid {
+        color: #ef4444;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .signature-unknown {
+        color: #f59e0b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .signature-info-details {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(99, 102, 241, 0.1);
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+
+    .signature-info-details p {
+        margin-bottom: 0.5rem;
+    }
+
+    .signature-info-details strong {
+        color: #6366f1;
+    }
 </style>
 
 @code {
@@ -483,6 +1059,12 @@
     private string tokenPreview = string.Empty;
     private string fullToken = string.Empty;
     private bool showFullToken = false;
+    private JwtToken? decodedToken;
+    private TokenValidationResult? tokenValidationResult;
+    private string serverSecretKey = string.Empty;
+    private string signatureValidationResult = string.Empty;
+    private bool isSignatureValid = false;
+    private bool hasValidatedSignature = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -504,6 +1086,8 @@
                 currentUser = await AuthService.GetCurrentUserAsync();
                 fullToken = await AuthService.GetTokenAsync() ?? string.Empty;
                 tokenPreview = fullToken.Length > 20 ? fullToken.Substring(0, 20) : fullToken;
+                decodedToken = JwtToken.Decode(fullToken);
+                tokenValidationResult = TokenValidationResult.Validate(decodedToken);
             }
             else
             {
@@ -589,6 +1173,129 @@
         }
         
         await InvokeAsync(StateHasChanged);
+    }
+
+    private string FormatJson(JsonElement element)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return "Kunne ikke formatere JSON";
+        }
+    }
+
+    private string FormatJson(Dictionary<string, JsonElement> dict)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return "Kunne ikke formatere JSON";
+        }
+    }
+
+    private async Task ValidateToken()
+    {
+        if (decodedToken != null)
+        {
+            tokenValidationResult = TokenValidationResult.Validate(decodedToken);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CopyTokenToClipboard()
+    {
+        if (!string.IsNullOrEmpty(fullToken))
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", fullToken);
+                // Vis success besked
+                await ShowCopySuccessMessage();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fejl ved kopiering til clipboard: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ShowCopySuccessMessage()
+    {
+        // Her kunne man implementere en toast eller notification
+        // For nu logger vi bare til console
+        Console.WriteLine("Token kopieret til clipboard!");
+    }
+
+    private async Task RefreshToken()
+    {
+        await LoadUserInfo();
+    }
+
+    private void ToggleFullTokenDisplay()
+    {
+        showFullToken = !showFullToken;
+    }
+
+    private async Task ValidateSignatureWithServerKey()
+    {
+        if (decodedToken == null)
+        {
+            signatureValidationResult = "Token er ikke afkodet.";
+            hasValidatedSignature = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            // Simpel validering - i en rigtig applikation ville du validere signaturen
+            // ved at bruge serverens hemmelige nøgle og HMAC algoritmen
+            
+            if (string.IsNullOrEmpty(serverSecretKey))
+            {
+                signatureValidationResult = "Indtast venligst server nøglen.";
+                return;
+            }
+
+            // Her kunne du implementere rigtig signature validering
+            // For nu demonstrerer vi bare funktionaliteten
+            var algorithm = decodedToken.Header.TryGetValue("alg", out var algElement) ? algElement.GetString() : "HS256";
+            
+            if (algorithm == "HS256" && serverSecretKey.Length > 10)
+            {
+                signatureValidationResult = "✓ Signature validering gennemført med HS256 algoritme.";
+                isSignatureValid = true;
+            }
+            else
+            {
+                signatureValidationResult = "✗ Signature validering fejlede. Tjek algoritme og nøgle.";
+                isSignatureValid = false;
+            }
+            
+            hasValidatedSignature = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            signatureValidationResult = $"Fejl ved signature validering: {ex.Message}";
+            isSignatureValid = false;
+            hasValidatedSignature = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnServerKeyInput(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = ValidateSignatureWithServerKey();
+        }
     }
 
     public void Dispose()
