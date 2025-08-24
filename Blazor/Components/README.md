@@ -11,6 +11,26 @@ Denne mappe indeholder genanvendelige UI-komponenter, som kan bruges på tværs 
 
 ## Eksempler på komponenter
 
-- StatusCard: Viser status for forskellige systemer
-- WeatherTable: Viser vejrdata i tabelformat
-- Counter: Interaktiv tæller-komponent
+- **StatusCard**: Viser status for forskellige systemer
+- **WeatherTable**: Viser vejrdata i tabelformat
+- **Counter**: Interaktiv tæller-komponent
+- **RoomAvailabilitySearch**: Avanceret søgekomponent til at finde ledige hotelrum
+
+## RoomAvailabilitySearch
+
+En omfattende komponent til at søge efter ledige hotelrum med følgende funktioner:
+
+### Funktionalitet:
+- Hotel-valg dropdown
+- Dato-valg for check-in/check-out
+- Antal gæster
+- Avancerede filtre (rumtype, pris, faciliteter)
+- Søgeresultater med rum-kort
+- Responsivt design med Bootstrap
+
+### Brug:
+```razor
+<RoomAvailabilitySearch />
+```
+
+Komponenten bruger `APIService.SearchRoomAvailabilityAsync()` til at kalde API'et og viser resultater i et responsivt card-layout.

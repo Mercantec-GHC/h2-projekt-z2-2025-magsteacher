@@ -13,7 +13,7 @@ public partial class APIService
         List<WeatherForecast>? forecasts = null;
 
         await foreach (
-            var forecast in httpClient.GetFromJsonAsAsyncEnumerable<WeatherForecast>(
+            var forecast in _httpClient.GetFromJsonAsAsyncEnumerable<WeatherForecast>(
                 "/api/weatherforecast",
                 cancellationToken
             )
@@ -25,11 +25,11 @@ public partial class APIService
             }
             if (forecast is not null)
             {
-                forecasts ??= [];
+                forecasts ??= new List<WeatherForecast>();
                 forecasts.Add(forecast);
             }
         }
 
-        return forecasts?.ToArray() ?? [];
+        return forecasts?.ToArray() ?? new WeatherForecast[0];
     }
 }
