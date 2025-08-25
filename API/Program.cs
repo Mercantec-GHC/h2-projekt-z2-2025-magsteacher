@@ -117,6 +117,7 @@ public class Program
                         .WithOrigins(
                             "http://localhost:5085",
                             "http://localhost:8052",
+                            "https://localhost:7285/",
                             "https://h2.mercantec.tech"
                         )
                         .AllowAnyMethod()
