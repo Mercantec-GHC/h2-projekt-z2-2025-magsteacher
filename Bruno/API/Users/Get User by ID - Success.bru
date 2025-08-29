@@ -1,0 +1,46 @@
+meta {
+  name: Get User by ID - Success
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/Users/{{userId}}
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+tests {
+  // Test hentning af bruger
+  
+  // Test response status (200 OK)
+  test("Hentning af bruger returnerer korrekt status", function() {
+    expect(res.status).to.be.equal(200);
+  });
+  
+  // Test response tid
+  test("Hentning er hurtig (under 2 sekunder)", function() {
+    expect(res.responseTime).to.be.lessThan(2000);
+  });
+  
+  // Test autorisation
+  test("Request har korrekt Authorization header", function() {
+    const authHeader = req.getHeader("Authorization");
+    expect(authHeader).to.include("Bearer ");
+    expect(authHeader).to.have.length.greaterThan(10);
+  });
+  
+  // Test response body struktur
+  test("Response body har korrekt struktur", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("username");
+  });
+}
+
+docs {
+  name: Get User by ID - Success
+  description: Henter en specifik bruger baseret på ID (succesfuld test)
+}

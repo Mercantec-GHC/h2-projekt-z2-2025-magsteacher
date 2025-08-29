@@ -89,8 +89,7 @@ namespace DomainModels
         [Required(ErrorMessage = "Role ID er påkrævet")]
         public string RoleId { get; set; } = string.Empty;
         
-        [Required(ErrorMessage = "UserInfo ID er påkrævet")]
-        public string UserInfoId { get; set; } = string.Empty;
+        public string? UserInfoId { get; set; } = string.Empty;
     }
 
 }

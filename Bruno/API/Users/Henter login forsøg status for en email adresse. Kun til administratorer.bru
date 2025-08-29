@@ -1,19 +1,23 @@
 meta {
   name: Henter login forsøg status for en email adresse. Kun til administratorer.
   type: http
-  seq: 12
+  seq: 13
 }
 
 get {
   url: {{baseUrl}}/api/Users/login-status/:email
   body: none
-  auth: none
+  auth: bearer
 }
 
 params:path {
-  email: 
+  email: {{User-Email}}
 }
 
 headers {
   Authorization: {{apiKey}}
+}
+
+auth:bearer {
+  token: {{JWT-Admin}}
 }

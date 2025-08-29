@@ -1,7 +1,7 @@
 meta {
-  name: User/Me
+  name: Admin/Me
   type: http
-  seq: 10
+  seq: 9
 }
 
 get {
@@ -15,5 +15,5 @@ headers {
 }
 
 auth:bearer {
-  token: {{JWT-User}}
+  token: {{JWT-Admin}}
 }

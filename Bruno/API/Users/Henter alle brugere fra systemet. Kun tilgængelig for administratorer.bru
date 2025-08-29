@@ -17,3 +17,10 @@ headers {
 auth:bearer {
   token: {{JWT-Admin}}
 }
+
+tests {
+  // Test response status
+  test("User login returnerer 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+}
