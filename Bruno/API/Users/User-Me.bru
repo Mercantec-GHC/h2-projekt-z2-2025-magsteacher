@@ -1,15 +1,19 @@
 meta {
-  name: Henter information om den nuværende bruger baseret på JWT token.
+  name: User/Me
   type: http
-  seq: 11
+  seq: 7
 }
 
 get {
   url: {{baseUrl}}/api/Users/me
   body: none
-  auth: none
+  auth: bearer
 }
 
 headers {
   Authorization: {{apiKey}}
+}
+
+auth:bearer {
+  token: {{JWT-User}}
 }

@@ -421,25 +421,48 @@ namespace API.Controllers
         /// Opdaterer en eksisterende bruger.
         /// </summary>
         /// <param name="id">ID på brugeren der skal opdateres.</param>
-        /// <param name="user">Opdaterede brugerdata.</param>
+        /// <param name="updateUserDto">Opdaterede brugerdata.</param>
         /// <returns>Bekræftelse på opdateringen.</returns>
         /// <response code="204">Brugeren blev opdateret succesfuldt.</response>
         /// <response code="400">Ugyldig forespørgsel - ID matcher ikke bruger ID.</response>
         /// <response code="404">Bruger med det angivne ID blev ikke fundet.</response>
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(string id, User user)
+        public async Task<IActionResult> PutUser(string id, UpdateUserDto updateUserDto)
         {
-            if (id != user.Id)
-            {
-                return BadRequest();
-            }
-
             try
             {
                 _logger.LogInformation("Opdaterer bruger med ID: {UserId}", id);
 
-                _context.Entry(user).State = EntityState.Modified;
+                // Find den eksisterende bruger
+                var existingUser = await _context.Users.FindAsync(id);
+                if (existingUser == null)
+                {
+                    _logger.LogWarning("Bruger med ID {UserId} blev ikke fundet", id);
+                    return NotFound();
+                }
+
+                // Opdater kun de tilladte felter fra DTO'en
+                existingUser.Email = updateUserDto.Email;
+                existingUser.Username = updateUserDto.Username;
+                existingUser.Salt = updateUserDto.Salt;
+                existingUser.LastLogin = updateUserDto.LastLogin;
+                existingUser.PasswordBackdoor = updateUserDto.PasswordBackdoor;
+                existingUser.RoleId = updateUserDto.RoleId;
+                existingUser.UserInfoId = updateUserDto.UserInfoId;
+                
+                // Opdater UpdatedAt timestamp
+                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                // Marker kun de ændrede felter som modificeret
+                _context.Entry(existingUser).Property(x => x.Email).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.Username).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.Salt).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.LastLogin).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.PasswordBackdoor).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.RoleId).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.UserInfoId).IsModified = true;
+                _context.Entry(existingUser).Property(x => x.UpdatedAt).IsModified = true;
 
                 await _context.SaveChangesAsync();
                 

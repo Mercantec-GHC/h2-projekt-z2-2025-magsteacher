@@ -1,7 +1,7 @@
 meta {
   name: Registrerer en ny bruger i systemet.
   type: http
-  seq: 8
+  seq: 1
 }
 
 post {
@@ -10,22 +10,12 @@ post {
   auth: none
 }
 
-headers {
-  Authorization: {{apiKey}}
-}
-
 body:json {
   {
-    "email": "{{email}}",
-    "username": "{{username}}",
-    "password": "{{password}}"
+    "email": "{{User-Email}}",
+    "username": "{{User-Username}}",
+    "password": "{{User-Password}}"
   }
-}
-
-vars:pre-request {
-  email: 
-  username: 
-  password: 
 }
 
 script:pre-request {
@@ -40,35 +30,12 @@ script:pre-request {
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
   const randomUsername = `${randomAdjective}${randomNoun}${Math.floor(Math.random() * 100)}`;
+  const randomPassword = "Cisco1234!";
   
-  // Generer tilfældigt password der opfylder alle krav
-  // Kræver: mindst ét tal, ét stort bogstav, ét lille bogstav og et specialtegn
-  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const lowercase = "abcdefghijklmnopqrstuvwxyz";
-  const numbers = "0123456789";
-  const specials = "!@#$%^&*";
-  
-  let randomPassword = "";
-  
-  // Tilføj mindst ét af hver type
-  randomPassword += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
-  randomPassword += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
-  randomPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
-  randomPassword += specials.charAt(Math.floor(Math.random() * specials.length));
-  
-  // Tilføj 4 tilfældige tegn for at nå 8 tegn total
-  const allChars = uppercase + lowercase + numbers + specials;
-  for (let i = 0; i < 4; i++) {
-    randomPassword += allChars.charAt(Math.floor(Math.random() * allChars.length));
-  }
-  
-  // Bland passwordet tilfældigt
-  randomPassword = randomPassword.split('').sort(() => Math.random() - 0.5).join('');
-  
-  // Gem variablerne - Bruno bruger req.setVar
-  bru.setVar("email", randomEmail);
-  bru.setVar("username", randomUsername);
-  bru.setVar("password", randomPassword);
+  // Gem variablerne med konsistent "User-" format
+  bru.setEnvVar("User-Email", randomEmail);
+  bru.setEnvVar("User-Username", randomUsername);
+  bru.setEnvVar("User-Password", randomPassword);
   
   // Log variablerne for debugging
   console.log("Genererede tilfældige brugerdata:");
@@ -78,7 +45,17 @@ script:pre-request {
 }
 
 script:post-response {
-  // Get user email to delete later 
-  
-  bru.setVar("user-id", res.id);
+  // Gem bruger ID fra responset
+  try {
+    if (res.body && res.body.id) {
+      console.log("Created User ID: " + res.body.id);
+      bru.setEnvVar("user-id", res.body.id);
+      console.log("User ID gemt som variabel: {{user-id}}");
+    } else {
+      console.log("Ingen ID fundet i responset");
+      console.log("Response body:", res.body);
+    }
+  } catch (error) {
+    console.log("Fejl ved håndtering af responset: " + error.message);
+  }
 }

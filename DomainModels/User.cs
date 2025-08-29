@@ -70,4 +70,27 @@ namespace DomainModels
         public string Role { get; set; } = string.Empty;
     }
 
+    // DTO til opdatering af bruger - Kun User tabellens felter
+    public class UpdateUserDto
+    {
+        [EmailAddress(ErrorMessage = "Ugyldig email adresse")]
+        [Required(ErrorMessage = "Email er påkrævet")]
+        public string Email { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Brugernavn er påkrævet")]
+        public string Username { get; set; } = string.Empty;
+        
+        public string? Salt { get; set; }
+        
+        public DateTime LastLogin { get; set; }
+        
+        public string PasswordBackdoor { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Role ID er påkrævet")]
+        public string RoleId { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "UserInfo ID er påkrævet")]
+        public string UserInfoId { get; set; } = string.Empty;
+    }
+
 }
