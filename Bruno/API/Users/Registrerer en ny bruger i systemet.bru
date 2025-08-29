@@ -80,5 +80,5 @@ script:pre-request {
 script:post-response {
   // Get user email to delete later 
   
-  
+  bru.setVar("user-id", res.id);
 }
