@@ -7,15 +7,19 @@ meta {
 put {
   url: {{baseUrl}}/api/Users/:id
   body: json
-  auth: none
+  auth: bearer
 }
 
 params:path {
-  id: 
+  id: {{user-id}}
 }
 
 headers {
   Authorization: {{apiKey}}
+}
+
+auth:bearer {
+  token: {{JWT-User}}
 }
 
 body:json {
@@ -25,4 +29,11 @@ body:json {
     "passwordBackdoor": "{{User-Password}}",
     "roleId": "1"
   }
+}
+
+tests {
+  // Test response status
+  test("User login returnerer 204 OK", function() {
+    expect(res.status).to.equal(204);
+  });
 }

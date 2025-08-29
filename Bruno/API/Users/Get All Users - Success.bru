@@ -1,15 +1,17 @@
 meta {
   name: Get All Users - Success
   type: http
-  seq: 19
+  seq: 14
 }
 
 get {
   url: {{baseUrl}}/api/Users
+  body: none
+  auth: none
 }
 
 headers {
-  Authorization: Bearer {{authToken}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 tests {
@@ -34,7 +36,7 @@ tests {
   
   // Test response body struktur
   test("Response body er et array", function() {
-    expect(res.body).to.be.an("array");
+    expect(res.body.data).to.be.an("array");
   });
   
   // Test at brugere har korrekt struktur

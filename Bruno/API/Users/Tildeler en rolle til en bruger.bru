@@ -7,19 +7,23 @@ meta {
 put {
   url: {{baseUrl}}/api/Users/:id/role
   body: json
-  auth: none
+  auth: bearer
 }
 
 params:path {
-  id: 
+  id: {{user-id}}
 }
 
 headers {
   Authorization: {{apiKey}}
 }
 
+auth:bearer {
+  token: {{JWT-Admin}}
+}
+
 body:json {
   {
-    "roleId": ""
+    "roleId": "2"
   }
 }

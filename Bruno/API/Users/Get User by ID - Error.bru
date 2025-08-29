@@ -1,15 +1,17 @@
 meta {
   name: Get User by ID - Error
   type: http
-  seq: 18
+  seq: 16
 }
 
 get {
   url: {{baseUrl}}/api/Users/{{invalidUserId}}
+  body: none
+  auth: none
 }
 
 headers {
-  Authorization: Bearer {{authToken}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 tests {
