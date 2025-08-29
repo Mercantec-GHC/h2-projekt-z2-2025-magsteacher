@@ -1,0 +1,35 @@
+meta {
+  name: Søger efter ledige rum baseret på avancerede kriterier.
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/Bookings/availability
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "hotelId": "",
+    "checkInDate": "",
+    "checkOutDate": "",
+    "numberOfGuests": 0,
+    "minimumBeds": 0,
+    "roomType": "",
+    "maxPricePerNight": "",
+    "requireBalcony": false,
+    "requireSeaView": false,
+    "requireWifi": false,
+    "requireAirConditioning": false,
+    "requireMinibar": false,
+    "requireAccessible": false,
+    "preferredFloor": 0,
+    "minimumSquareMeters": 0
+  }
+}

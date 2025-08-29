@@ -1,0 +1,15 @@
+meta {
+  name: Henter alle bookinger fra systemet. Kun tilgængelig for administratorer.
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Bookings
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

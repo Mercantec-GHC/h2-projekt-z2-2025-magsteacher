@@ -1,0 +1,15 @@
+meta {
+  name: Henter antal rækker i alle hovedtabeller.
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/Status/tablecount
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

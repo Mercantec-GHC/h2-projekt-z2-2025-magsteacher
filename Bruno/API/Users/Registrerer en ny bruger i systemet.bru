@@ -1,7 +1,7 @@
 meta {
   name: Registrerer en ny bruger i systemet.
   type: http
-  seq: 5
+  seq: 8
 }
 
 post {
@@ -16,8 +16,69 @@ headers {
 
 body:json {
   {
-    "email": "",
-    "username": "",
-    "password": ""
+    "email": "{{email}}",
+    "username": "{{username}}",
+    "password": "{{password}}"
   }
+}
+
+vars:pre-request {
+  email: 
+  username: 
+  password: 
+}
+
+script:pre-request {
+  // Generer tilfældig email
+  const domains = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "live.com"];
+  const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+  const randomEmail = `user${Math.floor(Math.random() * 10000)}@${randomDomain}`;
+  
+  // Generer tilfældigt brugernavn
+  const adjectives = ["Cool", "Happy", "Smart", "Fast", "Bright", "Wise", "Quick", "Sharp"];
+  const nouns = ["User", "Person", "Guy", "Girl", "One", "Star", "Hero", "Pro"];
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const randomUsername = `${randomAdjective}${randomNoun}${Math.floor(Math.random() * 100)}`;
+  
+  // Generer tilfældigt password der opfylder alle krav
+  // Kræver: mindst ét tal, ét stort bogstav, ét lille bogstav og et specialtegn
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const specials = "!@#$%^&*";
+  
+  let randomPassword = "";
+  
+  // Tilføj mindst ét af hver type
+  randomPassword += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  randomPassword += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  randomPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  randomPassword += specials.charAt(Math.floor(Math.random() * specials.length));
+  
+  // Tilføj 4 tilfældige tegn for at nå 8 tegn total
+  const allChars = uppercase + lowercase + numbers + specials;
+  for (let i = 0; i < 4; i++) {
+    randomPassword += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
+  
+  // Bland passwordet tilfældigt
+  randomPassword = randomPassword.split('').sort(() => Math.random() - 0.5).join('');
+  
+  // Gem variablerne - Bruno bruger req.setVar
+  bru.setVar("email", randomEmail);
+  bru.setVar("username", randomUsername);
+  bru.setVar("password", randomPassword);
+  
+  // Log variablerne for debugging
+  console.log("Genererede tilfældige brugerdata:");
+  console.log("Email: " + randomEmail);
+  console.log("Username: " + randomUsername);
+  console.log("Password: " + randomPassword);
+}
+
+script:post-response {
+  // Get user email to delete later 
+  
+  
 }

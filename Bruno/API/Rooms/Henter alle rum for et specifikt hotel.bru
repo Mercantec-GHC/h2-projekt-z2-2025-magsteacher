@@ -1,17 +1,17 @@
 meta {
-  name: Henter en specifik bruger baseret på ID.
+  name: Henter alle rum for et specifikt hotel.
   type: http
-  seq: 5
+  seq: 6
 }
 
 get {
-  url: {{baseUrl}}/api/Users/:id
+  url: {{baseUrl}}/api/Rooms/hotel/:hotelId
   body: none
   auth: none
 }
 
 params:path {
-  id: 
+  hotelId: 
 }
 
 headers {

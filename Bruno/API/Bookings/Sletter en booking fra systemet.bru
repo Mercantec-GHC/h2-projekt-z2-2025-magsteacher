@@ -1,11 +1,11 @@
 meta {
-  name: Henter en specifik bruger baseret på ID.
+  name: Sletter en booking fra systemet.
   type: http
   seq: 5
 }
 
-get {
-  url: {{baseUrl}}/api/Users/:id
+delete {
+  url: {{baseUrl}}/api/Bookings/:id
   body: none
   auth: none
 }

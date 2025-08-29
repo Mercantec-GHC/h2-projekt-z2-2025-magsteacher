@@ -1,11 +1,11 @@
 meta {
-  name: Henter alle tilgængelige roller i systemet.
+  name: Henter database statistikker.
   type: http
-  seq: 15
+  seq: 3
 }
 
 get {
-  url: {{baseUrl}}/api/Users/roles
+  url: {{baseUrl}}/api/DataSeeder/stats
   body: none
   auth: none
 }

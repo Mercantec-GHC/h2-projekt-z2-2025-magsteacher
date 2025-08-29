@@ -1,17 +1,17 @@
 meta {
-  name: Sletter en bruger fra systemet.
+  name: Henter alle bookinger for et specifikt rum.
   type: http
   seq: 7
 }
 
-delete {
-  url: {{baseUrl}}/api/Users/:id
+get {
+  url: {{baseUrl}}/api/Bookings/room/:roomId
   body: none
   auth: none
 }
 
 params:path {
-  id: 
+  roomId: 
 }
 
 headers {

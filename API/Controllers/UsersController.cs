@@ -515,7 +515,7 @@ namespace API.Controllers
 
                 _logger.LogInformation("Ny bruger registreret succesfuldt: {Email}", dto.Email);
 
-                return Ok(new { message = "Bruger oprettet!", user.Email, role = userRole.Name });
+                return Ok(new { message = "Bruger oprettet!", user.Email, role = userRole.Name, user.Id });
             }
             catch (Exception ex)
             {

@@ -1,0 +1,26 @@
+meta {
+  name: Opretter en ny booking i systemet.
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/Bookings
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
+
+body:json {
+  {
+    "userId": "",
+    "roomId": "",
+    "startDate": "",
+    "endDate": "",
+    "numberOfGuests": 0,
+    "specialRequests": ""
+  }
+}

@@ -1,7 +1,8 @@
 meta {
   name: Login endpoint der autentificerer bruger og returnerer JWT token.
+Implementerer rate limiting og progressive delays for at forhindre brute force angreb.
   type: http
-  seq: 6
+  seq: 9
 }
 
 post {
@@ -16,11 +17,7 @@ headers {
 
 body:json {
   {
-    "email": "mags@mercantec.dk",
-    "password": "Cisco1234!"
+    "email": "",
+    "password": ""
   }
-}
-
-assert {
-  : eq
 }

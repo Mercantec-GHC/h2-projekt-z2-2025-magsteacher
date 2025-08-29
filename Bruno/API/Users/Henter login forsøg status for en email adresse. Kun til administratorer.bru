@@ -1,0 +1,19 @@
+meta {
+  name: Henter login forsøg status for en email adresse. Kun til administratorer.
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/Users/login-status/:email
+  body: none
+  auth: none
+}
+
+params:path {
+  email: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}

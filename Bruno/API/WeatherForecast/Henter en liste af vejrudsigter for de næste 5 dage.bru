@@ -13,3 +13,9 @@ get {
 headers {
   Authorization: {{apiKey}}
 }
+
+tests {
+  test("Should always return 200 - for all request", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

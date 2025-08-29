@@ -1,0 +1,26 @@
+meta {
+  name: Login endpoint med query parameters der autentificerer bruger og returnerer JWT token.
+Implementerer rate limiting og progressive delays for at forhindre brute force angreb.
+
+⚠️ SIKKERHEDSADVARSEL: Denne endpoint er USIKKER og bør IKKE bruges i produktion!
+Query parameters bliver logget i server logs, proxy logs og browser historie, 
+hvilket betyder at login credentials kan blive eksponeret i klartekst.
+Brug den normale /login endpoint med POST body i stedet for sikker autentificering.
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/Users/login-query
+  body: none
+  auth: none
+}
+
+params:query {
+  ~email: 
+  ~password: 
+}
+
+headers {
+  Authorization: {{apiKey}}
+}
