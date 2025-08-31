@@ -2,6 +2,9 @@ meta {
   name: Get all Users
   type: http
   seq: 8
+  tags: [
+    User
+  ]
 }
 
 get {
@@ -16,4 +19,28 @@ params:path {
 
 headers {
   Authorization: {{apiKey}}
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 200 OK", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Test at responset er et array
+  test("Response skal være et array", function() {
+    expect(Array.isArray(res.body)).to.be.true;
+  });
+
+  // Test at alle brugere har User rolle
+  test("Alle brugere skal have User rolle", function() {
+    res.body.forEach((user, index) => {
+      expect(user.role).to.equal("User");
+    });
+  });
+
+  // Test at responset ikke er tomt
+  test("Response skal ikke være tom", function() {
+    expect(res.body).to.not.be.empty;
+  });
 }
