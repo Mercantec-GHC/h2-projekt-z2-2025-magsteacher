@@ -15,6 +15,23 @@ public class BrunoTestResultsController : ControllerBase
     {
         _logger = logger;
         _testResultsPath = Path.Combine(environment.ContentRootPath, "..", "test-results");
+        
+        // Debug logging
+        _logger.LogInformation("BrunoTestResultsController initialized");
+        _logger.LogInformation("ContentRootPath: {ContentRootPath}", environment.ContentRootPath);
+        _logger.LogInformation("TestResultsPath: {TestResultsPath}", _testResultsPath);
+        _logger.LogInformation("TestResultsPath exists: {Exists}", Directory.Exists(_testResultsPath));
+        
+        if (Directory.Exists(_testResultsPath))
+        {
+            var files = Directory.GetFiles(_testResultsPath);
+            _logger.LogInformation("Found {FileCount} files in test-results directory", files.Length);
+            foreach (var file in files.Take(5)) // Log first 5 files
+            {
+                _logger.LogInformation("File: {FileName}, Size: {Size} bytes, Modified: {Modified}", 
+                    Path.GetFileName(file), new FileInfo(file).Length, File.GetLastWriteTime(file));
+            }
+        }
     }
 
     /// <summary>
@@ -25,15 +42,23 @@ public class BrunoTestResultsController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("GetOverview called - checking path: {TestResultsPath}", _testResultsPath);
+            
             if (!Directory.Exists(_testResultsPath))
             {
+                _logger.LogWarning("Test results directory does not exist: {TestResultsPath}", _testResultsPath);
                 return Ok(new TestResultsOverview
                 {
                     AvailableResults = new List<TestFileInfo>()
                 });
             }
+            
+            _logger.LogInformation("Test results directory exists, scanning for files...");
 
-            var files = Directory.GetFiles(_testResultsPath)
+            var allFiles = Directory.GetFiles(_testResultsPath);
+            _logger.LogInformation("Found {TotalFiles} total files in directory", allFiles.Length);
+            
+            var files = allFiles
                 .Where(f => f.EndsWith(".json") || f.EndsWith(".html"))
                 .Select(f => new TestFileInfo
                 {
@@ -44,6 +69,8 @@ public class BrunoTestResultsController : ControllerBase
                 })
                 .OrderByDescending(f => f.LastModified)
                 .ToList();
+                
+            _logger.LogInformation("Found {FilteredFiles} JSON/HTML files after filtering", files.Count);
 
             var overview = new TestResultsOverview
             {
