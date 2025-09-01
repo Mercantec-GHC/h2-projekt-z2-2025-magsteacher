@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using DomainModels;
 
 namespace API.Controllers;
 
@@ -37,7 +38,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter oversigt over alle tilgængelige test resultater
     /// </summary>
     [HttpGet("overview")]
-    public ActionResult<DomainModels.TestResultsOverview> GetOverview()
+    public ActionResult<TestResultsOverview> GetOverview()
     {
         try
         {
@@ -46,9 +47,9 @@ public class BrunoTestResultsController : ControllerBase
             if (!Directory.Exists(_testResultsPath))
             {
                 _logger.LogWarning("Test results directory does not exist: {TestResultsPath}", _testResultsPath);
-                return Ok(new DomainModels.TestResultsOverview
+                return Ok(new TestResultsOverview
                 {
-                    AvailableResults = new List<DomainModels.TestFileInfo>()
+                    AvailableResults = new List<TestFileInfo>()
                 });
             }
             
@@ -59,7 +60,7 @@ public class BrunoTestResultsController : ControllerBase
             
             var files = allFiles
                 .Where(f => f.EndsWith(".json") || f.EndsWith(".html"))
-                .Select(f => new DomainModels.TestFileInfo
+                .Select(f => new TestFileInfo
                 {
                     Filename = Path.GetFileName(f),
                     LastModified = System.IO.File.GetLastWriteTime(f),
@@ -71,7 +72,7 @@ public class BrunoTestResultsController : ControllerBase
                 
             _logger.LogInformation("Found {FilteredFiles} JSON/HTML files after filtering", files.Count);
 
-            var overview = new DomainModels.TestResultsOverview
+            var overview = new TestResultsOverview
             {
                 AvailableResults = files,
                 LatestJsonResult = files.FirstOrDefault(f => f.Type == "json"),
@@ -87,7 +88,7 @@ public class BrunoTestResultsController : ControllerBase
                     try
                     {
                         var jsonContent = System.IO.File.ReadAllText(jsonPath);
-                        overview.LatestTestData = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
+                        overview.LatestTestData = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
                     }
                     catch (Exception ex)
                     {
@@ -109,7 +110,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter det seneste test resultat i JSON format
     /// </summary>
     [HttpGet("latest")]
-    public ActionResult<DomainModels.BrunoTestResult> GetLatestResult()
+    public ActionResult<BrunoTestResult> GetLatestResult()
     {
         try
         {
@@ -128,7 +129,7 @@ public class BrunoTestResultsController : ControllerBase
             }
 
             var jsonContent = System.IO.File.ReadAllText(latestJsonFile);
-            var result = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
+            var result = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
 
             return Ok(result);
         }
@@ -143,7 +144,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter et specifikt test resultat baseret på filnavn
     /// </summary>
     [HttpGet("file/{filename}")]
-    public ActionResult<DomainModels.BrunoTestResult> GetResultByFilename(string filename)
+    public ActionResult<BrunoTestResult> GetResultByFilename(string filename)
     {
         try
         {
@@ -164,7 +165,7 @@ public class BrunoTestResultsController : ControllerBase
             }
 
             var jsonContent = System.IO.File.ReadAllText(filePath);
-            var result = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
+            var result = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
 
             return Ok(result);
         }

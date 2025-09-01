@@ -60,6 +60,7 @@ services:
         echo '🧪 Running Bruno API Tests...' &&
         cd Bruno/API &&
         npx @usebruno/cli run --env H2-MAGS --output /app/test-results/test-report-$$(date +%Y-%m-%d_%H-%M-%S).html --format html &&
+        npx @usebruno/cli run --env H2-MAGS --output /app/test-results/test-results-$$(date +%Y-%m-%d_%H-%M-%S).json --format json &&
         echo '✅ Tests completed! Results saved to test-results/ folder' &&
         echo '📊 Test Summary:' &&
         ls -la /app/test-results/
