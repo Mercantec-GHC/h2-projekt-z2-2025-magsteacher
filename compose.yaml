@@ -16,6 +16,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_USE_POLLING_FILE_WATCHER=1
       - DOTNET_RUNNING_IN_CONTAINER=true
+    volumes:
+      - ./test-results:/app/test-results
     networks:
       - h2-network
 
