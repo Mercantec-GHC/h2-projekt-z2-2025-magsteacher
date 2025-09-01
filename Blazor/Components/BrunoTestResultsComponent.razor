@@ -151,13 +151,21 @@
             <div class="card mt-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>📄 HTML Test Rapport</h5>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="CloseHtmlReport">
-                        ✕ Luk
-                    </button>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => DownloadHtmlReport(selectedHtmlReportFilename)">
+                            💾 Download
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseHtmlReport">
+                            ✕ Luk
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
-                    <div style="height: 600px; overflow: auto;">
-                        @((MarkupString)selectedHtmlReport)
+                    <div style="height: 600px; overflow: auto; border: 1px solid #dee2e6;">
+                        <iframe src="@GetHtmlReportUrl(selectedHtmlReportFilename)" 
+                                style="width: 100%; height: 100%; border: none;"
+                                title="Bruno Test Rapport">
+                        </iframe>
                     </div>
                 </div>
             </div>
@@ -185,6 +193,7 @@
     private TestResultsOverview? overview;
     private bool isLoading = true;
     private string? selectedHtmlReport;
+    private string? selectedHtmlReportFilename;
     private string? selectedJsonData;
 
     protected override async Task OnInitializedAsync()
@@ -236,7 +245,8 @@
 
     private async Task ViewHtmlReport(string filename)
     {
-        selectedHtmlReport = await ApiService.GetBrunoTestHtmlReportAsync(filename);
+        selectedHtmlReport = "loading"; // Placeholder for loading state
+        selectedHtmlReportFilename = filename;
         selectedJsonData = null;
         StateHasChanged();
     }
@@ -252,7 +262,18 @@
     private void CloseHtmlReport()
     {
         selectedHtmlReport = null;
+        selectedHtmlReportFilename = null;
         StateHasChanged();
+    }
+
+    private string GetHtmlReportUrl(string filename)
+    {
+        return $"/api/BrunoTestResults/report/{filename}";
+    }
+
+    private async Task DownloadHtmlReport(string filename)
+    {
+        await JSRuntime.InvokeAsync<object>("downloadFile", GetHtmlReportUrl(filename), filename);
     }
 
     private void CloseJsonData()
