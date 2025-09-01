@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
-using DomainModels;
 
 namespace API.Controllers;
 
@@ -14,7 +13,7 @@ public class BrunoTestResultsController : ControllerBase
     public BrunoTestResultsController(ILogger<BrunoTestResultsController> logger, IWebHostEnvironment environment)
     {
         _logger = logger;
-        _testResultsPath = Path.Combine(environment.ContentRootPath, "..", "test-results");
+        _testResultsPath = Path.Combine(environment.ContentRootPath, "test-results");
         
         // Debug logging
         _logger.LogInformation("BrunoTestResultsController initialized");
