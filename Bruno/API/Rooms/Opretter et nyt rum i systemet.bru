@@ -16,20 +16,36 @@ headers {
 
 body:json {
   {
-    "number": "",
-    "capacity": 0,
-    "numberOfBeds": 0,
-    "roomType": "",
-    "pricePerNight": "",
-    "floorNumber": 0,
+    "number": "999",
+    "capacity": 2,
+    "numberOfBeds": 1,
+    "roomType": "Family Room",
+    "pricePerNight": "600",
+    "floorNumber": 9,
     "hasBalcony": false,
-    "hasSeaView": false,
+    "hasSeaView": true,
     "hasWifi": false,
     "hasAirConditioning": false,
     "hasMinibar": false,
     "isAccessible": false,
-    "description": "",
-    "squareMeters": 0,
-    "hotelId": ""
+    "description": "New dummy room",
+    "squareMeters": 43,
+    "hotelId": "{{hotel-id}}"
   }
+}
+
+script:post-response {
+  // Gem Hotel ID fra responset
+    try {
+      if (res.body && res.body.id) {
+        console.log("Created Hotel ID: " + res.body.id);
+        bru.setEnvVar("hotel-id", res.body.id);
+        console.log("Hotel ID gemt som variabel: {{hotel-id}}");
+      } else {
+        console.log("Ingen ID fundet i responset");
+        console.log("Response body:", res.body);
+      }
+    } catch (error) {
+      console.log("Fejl ved håndtering af responset: " + error.message);
+    }
 }

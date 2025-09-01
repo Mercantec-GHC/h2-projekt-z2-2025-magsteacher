@@ -11,12 +11,28 @@ post {
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 body:json {
   {
-    "name": "",
-    "address": ""
+    "name": "Dummy Hotel",
+    "address": "Dummy Street"
   }
+}
+
+script:post-response {
+  // Gem Hotel ID fra responset
+    try {
+      if (res.body && res.body.id) {
+        console.log("Created Hotel ID: " + res.body.id);
+        bru.setEnvVar("hotel-id", res.body.id);
+        console.log("Hotel ID gemt som variabel: {{hotel-id}}");
+      } else {
+        console.log("Ingen ID fundet i responset");
+        console.log("Response body:", res.body);
+      }
+    } catch (error) {
+      console.log("Fejl ved håndtering af responset: " + error.message);
+    }
 }
