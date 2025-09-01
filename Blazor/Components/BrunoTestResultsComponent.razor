@@ -225,11 +225,11 @@
             if (success)
             {
                 await LoadResults();
-                await JSRuntime.InvokeAsync<void>("alert", "Oprydning gennemført!");
+                await JSRuntime.InvokeAsync<object>("alert", "Oprydning gennemført!");
             }
             else
             {
-                await JSRuntime.InvokeAsync<void>("alert", "Fejl ved oprydning af test resultater.");
+                await JSRuntime.InvokeAsync<object>("alert", "Fejl ved oprydning af test resultater.");
             }
         }
     }

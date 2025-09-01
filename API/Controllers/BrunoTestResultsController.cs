@@ -38,7 +38,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter oversigt over alle tilgængelige test resultater
     /// </summary>
     [HttpGet("overview")]
-    public ActionResult<TestResultsOverview> GetOverview()
+    public ActionResult<DomainModels.TestResultsOverview> GetOverview()
     {
         try
         {
@@ -110,7 +110,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter det seneste test resultat i JSON format
     /// </summary>
     [HttpGet("latest")]
-    public ActionResult<BrunoTestResult> GetLatestResult()
+    public ActionResult<DomainModels.BrunoTestResult> GetLatestResult()
     {
         try
         {
@@ -129,7 +129,7 @@ public class BrunoTestResultsController : ControllerBase
             }
 
             var jsonContent = System.IO.File.ReadAllText(latestJsonFile);
-            var result = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
+            var result = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
 
             return Ok(result);
         }
@@ -144,7 +144,7 @@ public class BrunoTestResultsController : ControllerBase
     /// Henter et specifikt test resultat baseret på filnavn
     /// </summary>
     [HttpGet("file/{filename}")]
-    public ActionResult<BrunoTestResult> GetResultByFilename(string filename)
+    public ActionResult<DomainModels.BrunoTestResult> GetResultByFilename(string filename)
     {
         try
         {
@@ -165,7 +165,7 @@ public class BrunoTestResultsController : ControllerBase
             }
 
             var jsonContent = System.IO.File.ReadAllText(filePath);
-            var result = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
+            var result = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
 
             return Ok(result);
         }
