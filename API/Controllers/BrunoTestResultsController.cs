@@ -29,7 +29,7 @@ public class BrunoTestResultsController : ControllerBase
             foreach (var file in files.Take(5)) // Log first 5 files
             {
                 _logger.LogInformation("File: {FileName}, Size: {Size} bytes, Modified: {Modified}", 
-                    Path.GetFileName(file), new FileInfo(file).Length, File.GetLastWriteTime(file));
+                    Path.GetFileName(file), new FileInfo(file).Length, System.IO.File.GetLastWriteTime(file));
             }
         }
     }
@@ -47,9 +47,9 @@ public class BrunoTestResultsController : ControllerBase
             if (!Directory.Exists(_testResultsPath))
             {
                 _logger.LogWarning("Test results directory does not exist: {TestResultsPath}", _testResultsPath);
-                return Ok(new TestResultsOverview
+                return Ok(new DomainModels.TestResultsOverview
                 {
-                    AvailableResults = new List<TestFileInfo>()
+                    AvailableResults = new List<DomainModels.TestFileInfo>()
                 });
             }
             
@@ -60,7 +60,7 @@ public class BrunoTestResultsController : ControllerBase
             
             var files = allFiles
                 .Where(f => f.EndsWith(".json") || f.EndsWith(".html"))
-                .Select(f => new TestFileInfo
+                .Select(f => new DomainModels.TestFileInfo
                 {
                     Filename = Path.GetFileName(f),
                     LastModified = System.IO.File.GetLastWriteTime(f),
@@ -72,7 +72,7 @@ public class BrunoTestResultsController : ControllerBase
                 
             _logger.LogInformation("Found {FilteredFiles} JSON/HTML files after filtering", files.Count);
 
-            var overview = new TestResultsOverview
+            var overview = new DomainModels.TestResultsOverview
             {
                 AvailableResults = files,
                 LatestJsonResult = files.FirstOrDefault(f => f.Type == "json"),
@@ -88,7 +88,7 @@ public class BrunoTestResultsController : ControllerBase
                     try
                     {
                         var jsonContent = System.IO.File.ReadAllText(jsonPath);
-                        overview.LatestTestData = JsonSerializer.Deserialize<BrunoTestResult>(jsonContent);
+                        overview.LatestTestData = JsonSerializer.Deserialize<DomainModels.BrunoTestResult>(jsonContent);
                     }
                     catch (Exception ex)
                     {
