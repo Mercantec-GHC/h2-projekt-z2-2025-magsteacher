@@ -34,5 +34,12 @@ namespace DomainModels.Mapping
                 UpdatedAt = DateTime.UtcNow.AddHours(2)
             };
         }
+
+        public static void UpdateHotelFromDto(Hotel hotel, HotelPutDto hotelPutDto)
+        {
+            hotel.Name = hotelPutDto.Name;
+            hotel.Address = hotelPutDto.Address;
+            hotel.UpdatedAt = DateTime.UtcNow.AddHours(2);
+        }
     }
 }

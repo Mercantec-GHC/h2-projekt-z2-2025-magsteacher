@@ -1,20 +1,13 @@
 meta {
   name: DeleteNewUser
   type: http
-  seq: 17
-  tags: [
-    User
-  ]
+  seq: 4
 }
 
 delete {
   url: {{baseUrl}}/api/Users/{{user-id}}
   body: none
   auth: inherit
-}
-
-params:path {
-  id: 
 }
 
 headers {

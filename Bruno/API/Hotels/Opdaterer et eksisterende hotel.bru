@@ -1,7 +1,7 @@
 meta {
   name: Opdaterer et eksisterende hotel.
   type: http
-  seq: 4
+  seq: 3
 }
 
 put {
@@ -11,7 +11,7 @@ put {
 }
 
 params:path {
-  id: 
+  id: {{hotel-id}}
 }
 
 headers {
@@ -20,8 +20,16 @@ headers {
 
 body:json {
   {
-    "id": "",
-    "name": "",
-    "address": ""
+    "id": "{{hotel-id}}",
+    "name": "Dummy Hotel - Edit",
+    "address": "Dummy Street"
   }
+}
+
+tests {
+  // Test response status
+  test("Hotel create returnerer 200", function() {
+    expect(200).to.include(res.status);
+  });
+  
 }

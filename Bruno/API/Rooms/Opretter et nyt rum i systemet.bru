@@ -11,7 +11,7 @@ post {
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 body:json {
@@ -35,12 +35,12 @@ body:json {
 }
 
 script:post-response {
-  // Gem Hotel ID fra responset
+  // Gem Room ID fra responset
     try {
       if (res.body && res.body.id) {
-        console.log("Created Hotel ID: " + res.body.id);
-        bru.setEnvVar("hotel-id", res.body.id);
-        console.log("Hotel ID gemt som variabel: {{hotel-id}}");
+        console.log("Created Room ID: " + res.body.id);
+        bru.setEnvVar("room-id", res.body.id);
+        console.log("Room ID gemt som variabel: {{room-id}}");
       } else {
         console.log("Ingen ID fundet i responset");
         console.log("Response body:", res.body);
@@ -48,4 +48,16 @@ script:post-response {
     } catch (error) {
       console.log("Fejl ved håndtering af responset: " + error.message);
     }
+}
+
+tests {
+  // Test response status
+  test("Room create returnerer 200/201", function() {
+    expect([200, 201]).to.include(res.status);
+  });
+  
+  // Test at der kommer et ID tilbage
+  test("Response body indeholder id", function() {
+    expect(res.body).to.have.property("id");
+  });
 }

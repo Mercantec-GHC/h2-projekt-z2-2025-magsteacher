@@ -1,7 +1,7 @@
 meta {
   name: Sletter et rum fra systemet.
   type: http
-  seq: 5
+  seq: 2
 }
 
 delete {
@@ -11,9 +11,16 @@ delete {
 }
 
 params:path {
-  id: 
+  id: {{room-id}}
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
+}
+
+tests {
+  // Test response status
+  test("Hotel create returnerer 204", function() {
+    expect(204).to.include(res.status);
+  });
 }

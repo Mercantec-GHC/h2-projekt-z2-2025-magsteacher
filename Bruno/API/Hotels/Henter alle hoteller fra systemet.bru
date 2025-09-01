@@ -13,3 +13,11 @@ get {
 headers {
   Authorization: Bearer {{JWT-Admin}}
 }
+
+tests {
+  // Test response status
+  test("Hotel create returnerer 200", function() {
+    expect(200).to.include(res.status);
+  });
+  
+}

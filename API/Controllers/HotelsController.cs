@@ -70,7 +70,7 @@ namespace API.Controllers
         /// Opdaterer et eksisterende hotel.
         /// </summary>
         /// <param name="id">ID på hotellet der skal opdateres.</param>
-        /// <param name="hotel">Opdaterede hoteldata.</param>
+        /// <param name="hotelDto">Opdaterede hoteldata.</param>
         /// <returns>Bekræftelse på opdateringen.</returns>
         /// <response code="204">Hotellet blev opdateret succesfuldt.</response>
         /// <response code="400">Ugyldig forespørgsel - ID matcher ikke hotel ID.</response>
@@ -80,15 +80,20 @@ namespace API.Controllers
         /// For at beskytte mod overposting angreb, se https://go.microsoft.com/fwlink/?linkid=2123754
         /// </remarks>
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHotel(string id, HotelPutDto hotel)
+        public async Task<IActionResult> PutHotel(string id, HotelPutDto hotelDto)
         {
-            
-            if (id != hotel.Id)
+            if (id != hotelDto.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(hotel).State = EntityState.Modified;
+            var hotel = await _context.Hotels.FindAsync(id);
+            if (hotel == null)
+            {
+                return NotFound();
+            }
+
+            HotelMapping.UpdateHotelFromDto(hotel, hotelDto);
 
             try
             {

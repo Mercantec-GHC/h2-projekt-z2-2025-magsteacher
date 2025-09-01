@@ -11,11 +11,11 @@ put {
 }
 
 params:path {
-  id: 
+  id: {{room-id}}
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 body:json {
