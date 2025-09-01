@@ -177,10 +177,57 @@ public class BrunoTestResultsController : ControllerBase
     }
 
     /// <summary>
-    /// Henter HTML rapport som fil download
+    /// Henter HTML rapport som indhold (til iframe visning)
     /// </summary>
     [HttpGet("report/{filename}")]
     public ActionResult GetHtmlReport(string filename)
+    {
+        try
+        {
+            _logger.LogInformation("GetHtmlReport called for filename: {Filename}", filename);
+            _logger.LogInformation("Looking in path: {TestResultsPath}", _testResultsPath);
+            
+            if (!Directory.Exists(_testResultsPath))
+            {
+                _logger.LogWarning("Test results directory does not exist: {TestResultsPath}", _testResultsPath);
+                return NotFound("Test resultater mappe ikke fundet");
+            }
+
+            var filePath = Path.Combine(_testResultsPath, filename);
+            _logger.LogInformation("Full file path: {FilePath}", filePath);
+            _logger.LogInformation("File exists: {Exists}", System.IO.File.Exists(filePath));
+            
+            if (!System.IO.File.Exists(filePath))
+            {
+                // List available files for debugging
+                var availableFiles = Directory.GetFiles(_testResultsPath, "*.html");
+                _logger.LogWarning("HTML file not found. Available HTML files: {Files}", string.Join(", ", availableFiles.Select(Path.GetFileName)));
+                return NotFound($"HTML rapport '{filename}' ikke fundet. Tilgængelige filer: {string.Join(", ", availableFiles.Select(Path.GetFileName))}");
+            }
+
+            if (!filename.EndsWith(".html"))
+            {
+                return BadRequest("Kun HTML filer kan hentes som rapporter");
+            }
+
+            var htmlContent = System.IO.File.ReadAllText(filePath);
+            _logger.LogInformation("Successfully read HTML file, content length: {Length}", htmlContent.Length);
+            
+            // Return HTML content directly for iframe display
+            return Content(htmlContent, "text/html");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fejl ved hentning af HTML rapport: {Filename}", filename);
+            return StatusCode(500, "Intern server fejl ved hentning af rapport");
+        }
+    }
+
+    /// <summary>
+    /// Downloader HTML rapport som fil
+    /// </summary>
+    [HttpGet("download/{filename}")]
+    public ActionResult DownloadHtmlReport(string filename)
     {
         try
         {
@@ -197,7 +244,7 @@ public class BrunoTestResultsController : ControllerBase
 
             if (!filename.EndsWith(".html"))
             {
-                return BadRequest("Kun HTML filer kan hentes som rapporter");
+                return BadRequest("Kun HTML filer kan downloades");
             }
 
             var fileBytes = System.IO.File.ReadAllBytes(filePath);
@@ -205,8 +252,8 @@ public class BrunoTestResultsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fejl ved hentning af HTML rapport: {Filename}", filename);
-            return StatusCode(500, "Intern server fejl ved hentning af rapport");
+            _logger.LogError(ex, "Fejl ved download af HTML rapport: {Filename}", filename);
+            return StatusCode(500, "Intern server fejl ved download af rapport");
         }
     }
 

@@ -268,12 +268,15 @@
 
     private string GetHtmlReportUrl(string filename)
     {
+        // Brug API endpoint i stedet for direkte fil adgang
         return $"/api/BrunoTestResults/report/{filename}";
     }
 
     private async Task DownloadHtmlReport(string filename)
     {
-        await JSRuntime.InvokeAsync<object>("downloadFile", GetHtmlReportUrl(filename), filename);
+        // Brug download endpoint i stedet for report endpoint
+        var downloadUrl = $"/api/BrunoTestResults/download/{filename}";
+        await JSRuntime.InvokeAsync<object>("downloadFile", downloadUrl, filename);
     }
 
     private void CloseJsonData()
