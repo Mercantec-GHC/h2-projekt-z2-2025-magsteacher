@@ -22,14 +22,13 @@ body:json {
   {
     "id": "{{hotel-id}}",
     "name": "Dummy Hotel - Edit",
-    "address": "Dummy Street"
+    "address": "Dummy Street - Edit"
   }
 }
 
 tests {
-  // Test response status
-  test("Hotel create returnerer 200", function() {
-    expect(200).to.include(res.status);
+  // Test status kode
+  test("Status kode skal være 204 No Content", function() {
+    expect(res.status).to.equal(204);
   });
-  
 }

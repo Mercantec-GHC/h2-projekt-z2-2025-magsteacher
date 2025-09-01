@@ -15,5 +15,12 @@ params:path {
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 204 OK", function() {
+    expect(res.status).to.equal(204);
+  });
 }

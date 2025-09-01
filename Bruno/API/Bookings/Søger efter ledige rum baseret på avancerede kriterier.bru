@@ -16,20 +16,27 @@ headers {
 
 body:json {
   {
-    "hotelId": "",
-    "checkInDate": "",
-    "checkOutDate": "",
-    "numberOfGuests": 0,
-    "minimumBeds": 0,
+    "hotelId": "{{hotel-id}}",
+    "checkInDate": "{{start-date}}",
+    "checkOutDate": "{{end-date}}",
+    "numberOfGuests": 1,
+    "minimumBeds": 1,
     "roomType": "",
-    "maxPricePerNight": "",
+    "maxPricePerNight": "600",
     "requireBalcony": false,
     "requireSeaView": false,
     "requireWifi": false,
     "requireAirConditioning": false,
     "requireMinibar": false,
     "requireAccessible": false,
-    "preferredFloor": 0,
-    "minimumSquareMeters": 0
+    "preferredFloor": 1,
+    "minimumSquareMeters": 10
   }
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 200 No Content", function() {
+    expect(res.status).to.equal(200);
+  });
 }

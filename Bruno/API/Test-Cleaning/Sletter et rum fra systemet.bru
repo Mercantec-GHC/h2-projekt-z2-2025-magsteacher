@@ -19,8 +19,8 @@ headers {
 }
 
 tests {
-  // Test response status
-  test("Hotel create returnerer 204", function() {
-    expect(204).to.include(res.status);
+  // Test status kode
+  test("Status kode skal være 204 OK", function() {
+    expect(res.status).to.equal(204);
   });
 }

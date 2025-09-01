@@ -11,22 +11,28 @@ put {
 }
 
 params:path {
-  id: 
+  id: {{booking-id}}
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-Admin}}
 }
 
 body:json {
   {
-    "id": "",
-    "userId": "",
-    "roomId": "",
-    "startDate": "",
-    "endDate": "",
-    "numberOfGuests": 0,
-    "bookingStatus": "",
-    "specialRequests": ""
+    "id": "{{booking-id}}",
+    "userId": "{{user-id}}",
+    "roomId": "{{room-id}}",
+    "startDate": "{{start-date}}",
+    "endDate": "{{end-date}}",
+    "numberOfGuests": 2,
+    "specialRequests": "Yes"
   }
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 204 No Content", function() {
+    expect(res.status).to.equal(204);
+  });
 }

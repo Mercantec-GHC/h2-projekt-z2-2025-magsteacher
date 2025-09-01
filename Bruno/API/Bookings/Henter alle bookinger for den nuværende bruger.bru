@@ -11,5 +11,12 @@ get {
 }
 
 headers {
-  Authorization: {{apiKey}}
+  Authorization: Bearer {{JWT-User}}
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 200 No Content", function() {
+    expect(res.status).to.equal(200);
+  });
 }

@@ -38,9 +38,9 @@ script:post-response {
 }
 
 tests {
-  // Test response status
-  test("Hotel create returnerer 201", function() {
-    expect(201).to.include(res.status);
+  // Test status kode
+  test("Status kode skal være 201 OK", function() {
+    expect(res.status).to.equal(201);
   });
   
   // Test at der kommer et ID tilbage

@@ -20,21 +20,28 @@ headers {
 
 body:json {
   {
-    "id": "",
-    "number": "",
-    "capacity": 0,
-    "numberOfBeds": 0,
-    "roomType": "",
-    "pricePerNight": "",
-    "floorNumber": 0,
+    "id": "{{room-id}}",
+    "number": "999",
+    "capacity": 2,
+    "numberOfBeds": 1,
+    "roomType": "Family Room",
+    "pricePerNight": "700",
+    "floorNumber": 9,
     "hasBalcony": false,
-    "hasSeaView": false,
+    "hasSeaView": true,
     "hasWifi": false,
     "hasAirConditioning": false,
     "hasMinibar": false,
     "isAccessible": false,
-    "description": "",
-    "squareMeters": 0,
-    "hotelId": ""
+    "description": "New dummy room",
+    "squareMeters": 43,
+    "hotelId": "{{hotel-id}}"
   }
+}
+
+tests {
+  // Test status kode
+  test("Status kode skal være 204 No Content", function() {
+    expect(res.status).to.equal(204);
+  });
 }
