@@ -39,6 +39,36 @@ services:
     networks:
       - h2-network
 
+  # Bruno API Tests
+  bruno-tests:
+    image: node:18-alpine
+    container_name: h2-bruno-tests-mags25
+    working_dir: /app
+    volumes:
+      - ./Bruno:/app/Bruno
+      - ./test-results:/app/test-results
+    environment:
+      - NODE_ENV=production
+    command: >
+      sh -c "
+        echo '🚀 Installing Bruno CLI...' &&
+        npm install -g @usebruno/cli &&
+        echo '⏳ Waiting for API to be ready...' &&
+        sleep 30 &&
+        echo '🧪 Running Bruno API Tests...' &&
+        cd Bruno/API &&
+        npx @usebruno/cli run --env H2-MAGS --output /app/test-results/test-results-$$(date +%Y-%m-%d_%H-%M-%S).json --format json &&
+        npx @usebruno/cli run --env H2-MAGS --output /app/test-results/test-report-$$(date +%Y-%m-%d_%H-%M-%S).html --format html &&
+        echo '✅ Tests completed! Results saved to test-results/ folder' &&
+        echo '📊 Test Summary:' &&
+        ls -la /app/test-results/
+      "
+    depends_on:
+      - api
+    networks:
+      - h2-network
+    restart: "no"
+
 networks:
   h2-network:
     driver: bridge
