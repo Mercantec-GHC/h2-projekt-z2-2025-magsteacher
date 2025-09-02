@@ -1,10 +1,7 @@
 meta {
   name: Tildeler en rolle til en bruger.
   type: http
-  seq: 11
-  tags: [
-    User
-  ]
+  seq: 10
 }
 
 put {
@@ -39,12 +36,12 @@ tests {
     console.log("Response body type:", typeof res.body);
     console.log("Response body keys:", Object.keys(res.body || {}));
   });
-
+  
   // Test status kode
   test("Status kode skal være 200 OK", function() {
     expect(res.status).to.equal(200);
   });
-
+  
   // Test at responset har success message (mere fleksibel)
   test("Response skal have success message", function() {
     expect(res.body).to.have.property("message");
@@ -52,12 +49,12 @@ tests {
     const message = res.body.message;
     expect(message.includes("rolle") || message.includes("tildelt") || message.includes("success")).to.be.true;
   });
-
+  
   // Test at responset ikke er tomt
   test("Response skal ikke være tom", function() {
     expect(res.body).to.not.be.empty;
   });
-
+  
   // Test at responset har en message egenskab
   test("Response skal have message egenskab", function() {
     expect(res.body).to.have.property("message");

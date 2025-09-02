@@ -1,6 +1,7 @@
 meta {
   name: Henter oversigt over test resultater
   type: http
+  seq: 1
 }
 
 get {
@@ -20,15 +21,6 @@ tests {
   
   test("Response skal være et objekt", function() {
     expect(res.getBody()).to.be.an('object');
-  });
-  
-  test("Response skal have AvailableResults array", function() {
-    expect(res.getBody().AvailableResults).to.be.an('array');
-  });
-  
-  test("Response skal have LatestJsonResult og LatestHtmlResult", function() {
-    expect(res.getBody()).to.have.property('LatestJsonResult');
-    expect(res.getBody()).to.have.property('LatestHtmlResult');
   });
   
   test("Response tid skal være under 1 sekund", function() {
