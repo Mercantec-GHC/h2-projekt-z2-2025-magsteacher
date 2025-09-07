@@ -1,4 +1,4 @@
-# H2-Projekt MAGS-H2
+# H2-Projekt {Indsæt gruppenavn}
 
 Projektet han findes her - [H2 Projekt forløb på Notion](https://mercantec.notion.site/h2f)
 
