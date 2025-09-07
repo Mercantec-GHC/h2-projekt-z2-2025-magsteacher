@@ -60,16 +60,11 @@ namespace API.Services
                     _logger.LogInformation("Forsøger AD autentificering for bruger: {Username} (forsøg {Attempt}/{MaxRetries})", 
                         username, attempt, _maxRetries);
 
-                    // Test netværksforbindelse først
-                    if (!await TestNetworkConnectivityAsync())
+                    // Test netværksforbindelse først (spring over hvis det fejler)
+                    var networkOk = await TestNetworkConnectivityAsync();
+                    if (!networkOk)
                     {
-                        _logger.LogError("Netværksforbindelse til AD server {Server}:{Port} fejler", _server, _port);
-                        if (attempt < _maxRetries)
-                        {
-                            await Task.Delay(_retryDelayMs * attempt);
-                            continue;
-                        }
-                        return null;
+                        _logger.LogWarning("Netværkstest fejlede, men forsøger LDAP forbindelse alligevel");
                     }
 
                     // Opret LDAP forbindelse med timeout
@@ -272,7 +267,7 @@ namespace API.Services
         }
 
         /// <summary>
-        /// Tester netværksforbindelse til AD server
+        /// Tester netværksforbindelse til AD server ved at forsøge en TCP forbindelse
         /// </summary>
         /// <returns>True hvis forbindelsen er tilgængelig, ellers false</returns>
         private async Task<bool> TestNetworkConnectivityAsync()
@@ -281,25 +276,38 @@ namespace API.Services
             {
                 _logger.LogInformation("Tester netværksforbindelse til AD server {Server}:{Port}", _server, _port);
                 
-                using var client = new System.Net.NetworkInformation.Ping();
-                var reply = await client.SendPingAsync(_server, 5000); // 5 sekunder timeout
-                
-                if (reply.Status == System.Net.NetworkInformation.IPStatus.Success)
+                // Test DNS opløsning først
+                try
                 {
-                    _logger.LogInformation("Ping til AD server {Server} succesfuldt (tid: {RoundtripTime}ms)", 
-                        _server, reply.RoundtripTime);
+                    var hostEntry = await System.Net.Dns.GetHostEntryAsync(_server);
+                    _logger.LogInformation("DNS opløsning til {Server} succesfuldt: {Addresses}", 
+                        _server, string.Join(", ", hostEntry.AddressList.Select(a => a.ToString())));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("DNS opløsning fejlede for {Server}: {Message}", _server, ex.Message);
+                }
+                
+                using var client = new System.Net.Sockets.TcpClient();
+                var connectTask = client.ConnectAsync(_server, _port);
+                var timeoutTask = Task.Delay(5000); // 5 sekunder timeout
+                
+                var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+                
+                if (completedTask == connectTask && client.Connected)
+                {
+                    _logger.LogInformation("TCP forbindelse til AD server {Server}:{Port} succesfuldt", _server, _port);
                     return true;
                 }
                 else
                 {
-                    _logger.LogWarning("Ping til AD server {Server} fejlede med status: {Status}", 
-                        _server, reply.Status);
+                    _logger.LogWarning("TCP forbindelse til AD server {Server}:{Port} fejlede eller timeout", _server, _port);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fejl ved ping test til AD server {Server}:{Port}", _server, _port);
+                _logger.LogError(ex, "Fejl ved TCP test til AD server {Server}:{Port}", _server, _port);
                 return false;
             }
         }
@@ -314,29 +322,64 @@ namespace API.Services
             {
                 _logger.LogInformation("Tester LDAP forbindelse til AD server {Server}:{Port}", _server, _port);
 
-                using var connection = new LdapConnection(new LdapDirectoryIdentifier(_server, _port));
+                // Prøv først med standard konfiguration
+                if (await TryLDAPConnectionAsync(_server, _port, _useSSL))
+                {
+                    return true;
+                }
+
+                // Prøv alternativ port hvis standard fejler
+                if (_port == 389 && !_useSSL)
+                {
+                    _logger.LogInformation("Prøver alternativ LDAP forbindelse på port 636 med SSL");
+                    if (await TryLDAPConnectionAsync(_server, 636, true))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Generel fejl ved LDAP forbindelse til AD server {Server}:{Port}", _server, _port);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Prøver en specifik LDAP forbindelse
+        /// </summary>
+        private async Task<bool> TryLDAPConnectionAsync(string server, int port, bool useSSL)
+        {
+            try
+            {
+                _logger.LogInformation("Prøver LDAP forbindelse til {Server}:{Port} (SSL: {UseSSL})", server, port, useSSL);
+
+                using var connection = new LdapConnection(new LdapDirectoryIdentifier(server, port));
                 connection.SessionOptions.ProtocolVersion = 3;
-                connection.SessionOptions.SecureSocketLayer = _useSSL;
+                connection.SessionOptions.SecureSocketLayer = useSSL;
                 connection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
-                connection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+                connection.Timeout = TimeSpan.FromSeconds(10); // Kortere timeout for test
 
                 var networkCredential = new NetworkCredential(_username, _password, _domain);
                 connection.Credential = networkCredential;
 
                 await Task.Run(() => connection.Bind());
 
-                _logger.LogInformation("LDAP forbindelse til AD server {Server}:{Port} succesfuldt", _server, _port);
+                _logger.LogInformation("LDAP forbindelse til {Server}:{Port} (SSL: {UseSSL}) succesfuldt", server, port, useSSL);
                 return true;
             }
             catch (LdapException ex)
             {
-                _logger.LogError(ex, "LDAP forbindelse fejlede til AD server {Server}:{Port}. Error: {ErrorCode}", 
-                    _server, _port, ex.ErrorCode);
+                _logger.LogWarning("LDAP forbindelse fejlede til {Server}:{Port} (SSL: {UseSSL}). Error: {ErrorCode}", 
+                    server, port, useSSL, ex.ErrorCode);
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Generel fejl ved LDAP forbindelse til AD server {Server}:{Port}", _server, _port);
+                _logger.LogWarning("Fejl ved LDAP forbindelse til {Server}:{Port} (SSL: {UseSSL}): {Message}", 
+                    server, port, useSSL, ex.Message);
                 return false;
             }
         }
