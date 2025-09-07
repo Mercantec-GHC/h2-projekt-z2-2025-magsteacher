@@ -56,7 +56,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=https://25h2-mags.mercantec.tech/api
+      - ADMIN_API_URL=https://25h2-mags.mercantec.tech/api
     depends_on:
       - api
     networks:
