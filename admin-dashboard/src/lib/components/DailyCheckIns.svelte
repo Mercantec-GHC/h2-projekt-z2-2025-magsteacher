@@ -209,25 +209,24 @@
 						</div>
 					{/if}
 				</div>
-			</div>
 
-					<!-- Summary Stats -->
-					{#if checkInData.TotalCheckIns > 0 || checkInData.TotalCheckOuts > 0}
-						<div class="mt-6 pt-6 border-t border-gray-200">
-							<div class="grid grid-cols-2 gap-4">
-								<div class="text-center">
-									<div class="text-2xl font-bold text-green-600">{checkInData.TotalCheckIns}</div>
-									<div class="text-sm text-gray-500">Check-ins i dag</div>
-								</div>
-								<div class="text-center">
-									<div class="text-2xl font-bold text-red-600">{checkInData.TotalCheckOuts}</div>
-									<div class="text-sm text-gray-500">Check-outs i dag</div>
-								</div>
+				<!-- Summary Stats -->
+				{#if checkInData.TotalCheckIns > 0 || checkInData.TotalCheckOuts > 0}
+					<div class="mt-6 pt-6 border-t border-gray-200">
+						<div class="grid grid-cols-2 gap-4">
+							<div class="text-center">
+								<div class="text-2xl font-bold text-green-600">{checkInData.TotalCheckIns}</div>
+								<div class="text-sm text-gray-500">Check-ins i dag</div>
+							</div>
+							<div class="text-center">
+								<div class="text-2xl font-bold text-red-600">{checkInData.TotalCheckOuts}</div>
+								<div class="text-sm text-gray-500">Check-outs i dag</div>
 							</div>
 						</div>
-					{/if}
-				</div>
-			{/if}
+					</div>
+				{/if}
+			</div>
+		{/if}
 		{/if}
 	</div>
 </div>
