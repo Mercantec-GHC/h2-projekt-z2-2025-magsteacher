@@ -133,6 +133,14 @@ namespace API.Services
                 }
 
                 var entry = searchResponse.Entries[0];
+                
+                // Debug: Log alle tilgængelige attributter
+                _logger.LogInformation("Tilgængelige attributter for bruger:");
+                foreach (string attrName in entry.Attributes.AttributeNames)
+                {
+                    _logger.LogInformation("Attribut: {AttrName}, Værdier: {Count}", attrName, entry.Attributes[attrName].Count);
+                }
+                
                 var userInfo = new ADUserInfo
                 {
                     SamAccountName = GetAttributeValue(entry, "sAMAccountName"),
@@ -175,11 +183,17 @@ namespace API.Services
         {
             var groups = new List<string>();
             
+            _logger.LogInformation("Henter gruppemedlemskaber for bruger");
+            
             if (entry.Attributes["memberOf"] != null)
             {
+                _logger.LogInformation("memberOf attribut fundet med {Count} grupper", entry.Attributes["memberOf"].Count);
+                
                 foreach (var group in entry.Attributes["memberOf"])
                 {
                     var groupDn = group.ToString();
+                    _logger.LogInformation("Gruppe DN: {GroupDn}", groupDn);
+                    
                     if (!string.IsNullOrEmpty(groupDn))
                     {
                         // Ekstraher gruppenavn fra DN (f.eks. "CN=Admins,OU=Groups,DC=mags,DC=local" -> "Admins")
@@ -191,12 +205,29 @@ namespace API.Services
                             {
                                 var groupName = groupDn.Substring(cnIndex + 3, cnEnd - cnIndex - 3);
                                 groups.Add(groupName);
+                                _logger.LogInformation("Tilføjet gruppe: {GroupName}", groupName);
                             }
+                            else
+                            {
+                                // Hvis der ikke er et komma efter CN, så er det hele gruppenavnet
+                                var groupName = groupDn.Substring(cnIndex + 3);
+                                groups.Add(groupName);
+                                _logger.LogInformation("Tilføjet gruppe (uden komma): {GroupName}", groupName);
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Kunne ikke finde CN= i gruppe DN: {GroupDn}", groupDn);
                         }
                     }
                 }
             }
+            else
+            {
+                _logger.LogWarning("memberOf attribut ikke fundet for bruger");
+            }
 
+            _logger.LogInformation("Samlet grupper fundet: {Groups}", string.Join(", ", groups));
             return groups;
         }
 

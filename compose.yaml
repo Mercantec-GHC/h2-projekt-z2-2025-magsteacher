@@ -18,8 +18,7 @@ services:
       - DOTNET_RUNNING_IN_CONTAINER=true
     volumes:
       - ./test-results:/app/test-results
-    networks:
-      - h2-network
+    network_mode: host
 
   # Blazor WASM App
   blazor:
