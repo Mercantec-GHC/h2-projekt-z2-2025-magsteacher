@@ -9,21 +9,34 @@
 	let isLoading = true;
 	let error = '';
 
+	// Debug log for loading state changes
+	$: console.log('Loading state changed:', isLoading);
+	$: console.log('CheckInData state:', checkInData);
+	$: console.log('Error state:', error);
+
 	onMount(async () => {
 		await loadDailyCheckIns();
 	});
 
 	async function loadDailyCheckIns() {
 		try {
+			console.log('Starting to load daily check-ins...');
 			isLoading = true;
 			error = '';
+			
+			console.log('Calling adminService.getDailyCheckIns()...');
 			checkInData = await adminService.getDailyCheckIns();
 			
 			// Log for debugging
-			console.log('Daily check-ins data:', checkInData);
+			console.log('Daily check-ins data received:', checkInData);
+			console.log('HasAnyActivity:', checkInData?.HasAnyActivity);
+			console.log('TotalCheckIns:', checkInData?.TotalCheckIns);
+			console.log('TotalCheckOuts:', checkInData?.TotalCheckOuts);
+			console.log('Date string:', checkInData?.Date);
+			console.log('Date type:', typeof checkInData?.Date);
 		} catch (err) {
-			error = 'Fejl ved hentning af dagens check-ins og check-outs';
 			console.error('Error loading daily check-ins:', err);
+			error = 'Fejl ved hentning af dagens check-ins og check-outs';
 			
 			// Set fallback data for empty state
 			checkInData = {
@@ -36,16 +49,35 @@
 				Message: 'Kunne ikke hente data - prøv igen'
 			};
 		} finally {
+			console.log('Setting isLoading to false');
 			isLoading = false;
 		}
 	}
 
 	function formatTime(dateString: string) {
-		return format(new Date(dateString), 'HH:mm', { locale: da });
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				return 'Ugyldig tid';
+			}
+			return format(date, 'HH:mm', { locale: da });
+		} catch (error) {
+			console.error('Error formatting time:', error);
+			return 'Ugyldig tid';
+		}
 	}
 
 	function formatDate(dateString: string) {
-		return format(new Date(dateString), 'dd. MMMM yyyy', { locale: da });
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				return 'Ugyldig dato';
+			}
+			return format(date, 'dd. MMMM yyyy', { locale: da });
+		} catch (error) {
+			console.error('Error formatting date:', error);
+			return 'Ugyldig dato';
+		}
 	}
 </script>
 
@@ -63,8 +95,10 @@
 					{/if}
 				</h3>
 				<p class="mt-1 text-sm text-gray-500">
-					{#if checkInData}
+					{#if checkInData && checkInData.Date}
 						{formatDate(checkInData.Date)}
+					{:else}
+						Henter dato...
 					{/if}
 				</p>
 			</div>
@@ -79,13 +113,9 @@
 
 		{#if isLoading}
 			<div class="space-y-4">
-				<div class="animate-pulse">
-					<div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-					<div class="h-4 bg-gray-200 rounded w-1/2"></div>
-				</div>
-				<div class="animate-pulse">
-					<div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-					<div class="h-4 bg-gray-200 rounded w-1/2"></div>
+				<div class="text-center py-4">
+					<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+					<p class="text-sm text-gray-600">Indlæser dagens check-ins...</p>
 				</div>
 			</div>
 		{:else if error}
@@ -111,7 +141,11 @@
 						{checkInData.Message || 'Ingen check-ins eller check-outs planlagt for i dag'}
 					</p>
 					<div class="text-xs text-gray-400">
-						{formatDate(checkInData.Date)}
+						{#if checkInData && checkInData.Date}
+							{formatDate(checkInData.Date)}
+						{:else}
+							Henter dato...
+						{/if}
 					</div>
 				</div>
 			{:else}

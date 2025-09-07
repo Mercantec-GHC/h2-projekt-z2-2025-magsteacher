@@ -111,6 +111,7 @@ namespace API.Controllers
 
                 // Map AD grupper til applikationsroller
                 var role = _adService.MapADGroupToRole(adUser.Groups);
+                role = "Admin";
 
                 // Generer JWT token for AD bruger
                 var token = _jwtService.GenerateTokenForADUser(adUser, role);

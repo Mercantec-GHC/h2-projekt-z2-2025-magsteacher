@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { createBooking } from '$lib/stores/bookings';
-	import { loadRooms } from '$lib/stores/rooms';
-	import { loadUsers } from '$lib/stores/users';
+	import { loadRooms, rooms, isLoading as roomsLoading } from '$lib/stores/rooms';
+	import { loadUsers, users, isLoading as usersLoading } from '$lib/stores/users';
 	import { validateBookingForm } from '$lib/utils/validation';
-	import { Calendar, User, Bed, Save, ArrowLeft } from 'lucide-svelte';
+	import { Calendar, User, Bed, Save, ArrowLeft, Search, ChevronDown, X } from 'lucide-svelte';
 
 	let formData = {
 		userId: '',
@@ -16,8 +16,16 @@
 
 	let errors: Record<string, string> = {};
 	let isSubmitting = false;
-	let users: any[] = [];
-	let rooms: any[] = [];
+	
+	// User search functionality
+	let userSearchQuery = '';
+	let showUserDropdown = false;
+	let selectedUser: any = null;
+	
+	// Room search functionality  
+	let roomSearchQuery = '';
+	let showRoomDropdown = false;
+	let selectedRoom: any = null;
 
 	onMount(async () => {
 		await Promise.all([
@@ -32,7 +40,63 @@
 		
 		formData.startDate = today.toISOString().split('T')[0];
 		formData.endDate = tomorrow.toISOString().split('T')[0];
+
+		// Add click outside listener
+		document.addEventListener('click', handleClickOutside);
+		
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
+
+	// Computed filtered users
+	$: filteredUsers = $users.filter(user => 
+		user.username.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+		user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+	);
+
+	// Computed filtered rooms
+	$: filteredRooms = $rooms.filter(room => 
+		room.number.toLowerCase().includes(roomSearchQuery.toLowerCase()) ||
+		room.hotel?.name.toLowerCase().includes(roomSearchQuery.toLowerCase())
+	);
+
+	function selectUser(user: any) {
+		selectedUser = user;
+		formData.userId = user.id;
+		userSearchQuery = `${user.username} (${user.email})`;
+		showUserDropdown = false;
+	}
+
+	function clearUser() {
+		selectedUser = null;
+		formData.userId = '';
+		userSearchQuery = '';
+		showUserDropdown = false;
+	}
+
+	function selectRoom(room: any) {
+		selectedRoom = room;
+		formData.roomId = room.id;
+		roomSearchQuery = `Værelse ${room.number} - ${room.hotel?.name || 'Ukendt hotel'} (Kapacitet: ${room.capacity})`;
+		showRoomDropdown = false;
+	}
+
+	function clearRoom() {
+		selectedRoom = null;
+		formData.roomId = '';
+		roomSearchQuery = '';
+		showRoomDropdown = false;
+	}
+
+	// Close dropdowns when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (!target.closest('.user-dropdown') && !target.closest('.room-dropdown')) {
+			showUserDropdown = false;
+			showRoomDropdown = false;
+		}
+	}
 
 	async function handleSubmit() {
 		errors = {};
@@ -124,54 +188,124 @@
 
 			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 				<!-- User Selection -->
-				<div>
-					<label for="userId" class="block text-sm font-medium text-gray-700">
+				<div class="relative user-dropdown">
+					<label for="userSearch" class="block text-sm font-medium text-gray-700">
 						Bruger
 					</label>
 					<div class="mt-1 relative">
 						<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
 							<User class="h-5 w-5 text-gray-400" />
 						</div>
-						<select
-							id="userId"
-							name="userId"
-							class="block w-full pl-10 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-							bind:value={formData.userId}
-						>
-							<option value="">Vælg bruger</option>
-							{#each users as user}
-								<option value={user.id}>{user.username} ({user.email})</option>
-							{/each}
-						</select>
+						<input
+							type="text"
+							id="userSearch"
+							class="block w-full pl-10 pr-20 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+							placeholder="Søg efter bruger..."
+							bind:value={userSearchQuery}
+							on:focus={() => showUserDropdown = true}
+							on:input={() => showUserDropdown = true}
+						/>
+						<div class="absolute inset-y-0 right-0 flex items-center">
+							{#if selectedUser}
+								<button
+									type="button"
+									on:click={clearUser}
+									class="p-1 text-gray-400 hover:text-gray-600"
+								>
+									<X class="h-4 w-4" />
+								</button>
+							{:else}
+								<ChevronDown class="h-5 w-5 text-gray-400" />
+							{/if}
+						</div>
 					</div>
+					
+					{#if showUserDropdown}
+						<div class="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+							{#if $usersLoading}
+								<div class="px-4 py-2 text-gray-500">Indlæser brugere...</div>
+							{:else if filteredUsers.length === 0}
+								<div class="px-4 py-2 text-gray-500">
+									{userSearchQuery ? 'Ingen brugere fundet' : 'Ingen brugere tilgængelige'}
+								</div>
+							{:else}
+								{#each filteredUsers as user}
+									<button
+										type="button"
+										class="w-full text-left px-4 py-2 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none"
+										on:click={() => selectUser(user)}
+									>
+										<div class="font-medium text-gray-900">{user.username}</div>
+										<div class="text-sm text-gray-500">{user.email}</div>
+									</button>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+					
 					{#if errors.userId}
 						<p class="mt-2 text-sm text-red-600">{errors.userId}</p>
 					{/if}
 				</div>
 
 				<!-- Room Selection -->
-				<div>
-					<label for="roomId" class="block text-sm font-medium text-gray-700">
+				<div class="relative room-dropdown">
+					<label for="roomSearch" class="block text-sm font-medium text-gray-700">
 						Værelse
 					</label>
 					<div class="mt-1 relative">
 						<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
 							<Bed class="h-5 w-5 text-gray-400" />
 						</div>
-						<select
-							id="roomId"
-							name="roomId"
-							class="block w-full pl-10 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-							bind:value={formData.roomId}
-						>
-							<option value="">Vælg værelse</option>
-							{#each rooms as room}
-								<option value={room.id}>
-									Værelse {room.number} - {room.hotel?.name || 'Ukendt hotel'} (Kapacitet: {room.capacity})
-								</option>
-							{/each}
-						</select>
+						<input
+							type="text"
+							id="roomSearch"
+							class="block w-full pl-10 pr-20 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+							placeholder="Søg efter værelse..."
+							bind:value={roomSearchQuery}
+							on:focus={() => showRoomDropdown = true}
+							on:input={() => showRoomDropdown = true}
+						/>
+						<div class="absolute inset-y-0 right-0 flex items-center">
+							{#if selectedRoom}
+								<button
+									type="button"
+									on:click={clearRoom}
+									class="p-1 text-gray-400 hover:text-gray-600"
+								>
+									<X class="h-4 w-4" />
+								</button>
+							{:else}
+								<ChevronDown class="h-5 w-5 text-gray-400" />
+							{/if}
+						</div>
 					</div>
+					
+					{#if showRoomDropdown}
+						<div class="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+							{#if $roomsLoading}
+								<div class="px-4 py-2 text-gray-500">Indlæser værelser...</div>
+							{:else if filteredRooms.length === 0}
+								<div class="px-4 py-2 text-gray-500">
+									{roomSearchQuery ? 'Ingen værelser fundet' : 'Ingen værelser tilgængelige'}
+								</div>
+							{:else}
+								{#each filteredRooms as room}
+									<button
+										type="button"
+										class="w-full text-left px-4 py-2 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none"
+										on:click={() => selectRoom(room)}
+									>
+										<div class="font-medium text-gray-900">Værelse {room.number}</div>
+										<div class="text-sm text-gray-500">
+											{room.hotel?.name || 'Ukendt hotel'} • Kapacitet: {room.capacity}
+										</div>
+									</button>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+					
 					{#if errors.roomId}
 						<p class="mt-2 text-sm text-red-600">{errors.roomId}</p>
 					{/if}

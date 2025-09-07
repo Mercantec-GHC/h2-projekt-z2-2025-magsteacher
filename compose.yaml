@@ -41,6 +41,27 @@ services:
     networks:
       - h2-network
 
+  # Admin Dashboard (Svelte)
+  admin-dashboard:
+    build:
+      context: .
+      dockerfile: admin-dashboard/Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        VCS_REF: ${VCS_REF:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}
+    container_name: h2-admin-dashboard-mags25
+    ports:
+      - "8753:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=https://25h2-mags.mercantec.tech/api
+    depends_on:
+      - api
+    networks:
+      - h2-network
+
   # Bruno API Tests
   bruno-tests:
     image: node:20-alpine
