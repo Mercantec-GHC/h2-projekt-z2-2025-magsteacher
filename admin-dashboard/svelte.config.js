@@ -11,8 +11,7 @@ const config = {
 		// adapter-node for Node.js deployment
 		adapter: adapter({
 			out: 'build',
-			precompress: false,
-			envPrefix: 'ADMIN_'
+			precompress: false
 		})
 	}
 };
