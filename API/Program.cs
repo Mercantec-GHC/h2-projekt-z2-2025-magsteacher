@@ -123,7 +123,7 @@ public class Program
                             "https://localhost:7285",
                             "https://h2.mercantec.tech",
                             "http://localhost:5173",
-                            "https://h2-mags-admin.mercantec.tech/"
+                            "https://h2-mags-admin.mercantec.tech"
                         )
                         .AllowAnyMethod()
                         .AllowAnyHeader()
