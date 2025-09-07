@@ -171,6 +171,8 @@ public class Program
 
         app.MapControllers();
 
-        app.Run();
+        // Set default port if not specified
+        var port = Environment.GetEnvironmentVariable("ASPNETCORE_URLS")?.Split(':').LastOrDefault() ?? "8045";
+        app.Run($"http://+:{port}");
     }
 }
