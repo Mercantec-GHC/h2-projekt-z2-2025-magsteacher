@@ -8,7 +8,7 @@ services:
         BUILD_DATE: ${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
     container_name: h2-api-mags25
     ports:
-      - "8751:8080"
+      - "8751:8045"
     env_file:
       - .env
     environment:
