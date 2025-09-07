@@ -33,6 +33,9 @@ public class Program
         
         // Registrer Data Seeder Service
         builder.Services.AddScoped<DataSeederService>();
+        
+        // Registrer Active Directory Service
+        builder.Services.AddScoped<ActiveDirectoryService>();
 
         // Konfigurer JWT Authentication
         var jwtSecretKey = Configuration["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
