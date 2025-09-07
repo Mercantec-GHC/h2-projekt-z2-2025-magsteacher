@@ -5,6 +5,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
+# Install required packages for System.DirectoryServices.Protocols
+RUN apt-get update && \
+    apt-get install -y libldap-2.5-0 libldap-common libsasl2-2 libsasl2-modules && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
