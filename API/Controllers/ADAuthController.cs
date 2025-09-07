@@ -203,6 +203,9 @@ namespace API.Controllers
             {
                 _logger.LogInformation("Henter AD status og konfiguration");
 
+                // Test LDAP forbindelse først
+                var ldapConnectionOk = await _adService.TestLDAPConnectionAsync();
+                
                 // Test AD forbindelse med test credentials
                 var testUser = await _adService.AuthenticateUserAsync("adReader", "Merc1234!");
                 
@@ -211,12 +214,17 @@ namespace API.Controllers
                     adConfigured = true,
                     server = "10.133.71.100",
                     domain = "mags.local",
+                    port = 389,
+                    useSSL = false,
+                    ldapConnection = ldapConnectionOk,
                     testConnection = testUser != null,
                     testUser = testUser?.SamAccountName ?? "Ikke tilgængelig",
                     timestamp = DateTime.UtcNow.AddHours(2)
                 };
 
-                _logger.LogInformation("AD status hentet: {Status}", status.testConnection ? "OK" : "FEJL");
+                var statusText = status.ldapConnection && status.testConnection ? "OK" : "FEJL";
+                _logger.LogInformation("AD status hentet: {Status} (LDAP: {LdapStatus}, Auth: {AuthStatus})", 
+                    statusText, status.ldapConnection ? "OK" : "FEJL", status.testConnection ? "OK" : "FEJL");
 
                 return Ok(status);
             }
