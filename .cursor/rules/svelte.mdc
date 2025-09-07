@@ -1,5 +1,5 @@
 ---
-description: Apply when working on the admindashboard 
+description: Apply when working on the admindashboard that is built with Svelte!
 alwaysApply: false
 ---
 You are an expert in Svelte 5, SvelteKit, TypeScript, and modern web development.

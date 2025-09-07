@@ -219,13 +219,19 @@ namespace API.Services
                 return "Manager";
             }
             
+            if (adGroups.Any(g => g.Contains("Receptionist", StringComparison.OrdinalIgnoreCase) ||
+                                 g.Contains("Reception", StringComparison.OrdinalIgnoreCase)))
+            {
+                return "Receptionist";
+            }
+            
             if (adGroups.Any(g => g.Contains("User", StringComparison.OrdinalIgnoreCase)))
             {
                 return "User";
             }
 
-            // Default rolle
-            return "User";
+            // Default rolle for AD brugere er Receptionist
+            return "Receptionist";
         }
     }
 
