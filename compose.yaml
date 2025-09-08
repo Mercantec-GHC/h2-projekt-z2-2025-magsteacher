@@ -18,7 +18,13 @@ services:
       - DOTNET_RUNNING_IN_CONTAINER=true
     volumes:
       - ./test-results:/app/test-results
-    network_mode: host
+    networks:
+      - h2-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "ad-server:10.133.71.100"
 
   # Blazor WASM App
   blazor:
@@ -93,3 +99,9 @@ services:
 networks:
   h2-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

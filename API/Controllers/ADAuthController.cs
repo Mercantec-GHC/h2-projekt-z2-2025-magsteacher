@@ -207,6 +207,7 @@ namespace API.Controllers
                 var ldapConnectionOk = await _adService.TestLDAPConnectionAsync();
                 
                 // Test AD forbindelse med test credentials
+                _logger.LogInformation("Tester AD forbindelse med test credentials");
                 var testUser = await _adService.AuthenticateUserAsync("adReader", "Merc1234!");
                 
                 var status = new

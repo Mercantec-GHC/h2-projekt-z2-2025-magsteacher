@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://25h2-mags.mercantec.tech/api';
+const API_BASE_URL = 'http://localhost:8071/api'; // https://25h2-mags.mercantec.tech/api
 
 export const api = axios.create({
 	baseURL: API_BASE_URL,
@@ -38,17 +38,17 @@ api.interceptors.response.use(
 // Auth service
 export const authService = {
 	async login(username: string, password: string) {
-		const response = await api.post('/auth/ad-login', { username, password });
+		const response = await api.post('/Auth/ad-login', { username, password });
 		return response.data;
 	},
 
 	async getCurrentUser() {
-		const response = await api.get('/auth/ad-me');
+		const response = await api.get('/Auth/ad-me');
 		return response.data;
 	},
 
 	async getADStatus() {
-		const response = await api.get('/auth/ad-status');
+		const response = await api.get('/Auth/ad-status');
 		return response.data;
 	}
 };

@@ -75,6 +75,63 @@ namespace API.Services
                     connection.SessionOptions.SecureSocketLayer = _useSSL;
                     connection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
                     connection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+                    
+                    // Tilføj debugging for Docker miljø
+                    _logger.LogInformation("LDAP forbindelseskonfiguration: Server={Server}, Port={Port}, SSL={UseSSL}, Timeout={Timeout}s", 
+                        _server, _port, _useSSL, _connectionTimeout);
+                    
+                    // Prøv alternativ forbindelsesmetode for Docker miljø
+                    try
+                    {
+                        // Test forbindelse først
+                        await Task.Run(() => connection.Bind());
+                        _logger.LogInformation("LDAP forbindelse etableret succesfuldt");
+                    }
+                    catch (LdapException bindEx)
+                    {
+                        _logger.LogWarning("Initial LDAP bind fejlede: {ErrorCode} - {ErrorMessage}. Prøver alternativ metode...", 
+                            bindEx.ErrorCode, GetLDAPErrorMessage(bindEx.ErrorCode));
+                        
+                        // Prøv at oprette forbindelse uden SSL først
+                        if (_useSSL)
+                        {
+                            _logger.LogInformation("Prøver LDAP forbindelse uden SSL");
+                            using var fallbackConnection = new LdapConnection(new LdapDirectoryIdentifier(_server, 389));
+                            fallbackConnection.SessionOptions.ProtocolVersion = 3;
+                            fallbackConnection.SessionOptions.SecureSocketLayer = false;
+                            fallbackConnection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+                            
+                            var fallbackCredential = new NetworkCredential(_username, _password, _domain);
+                            fallbackConnection.Credential = fallbackCredential;
+                            
+                            await Task.Run(() => fallbackConnection.Bind());
+                            _logger.LogInformation("Fallback LDAP forbindelse (uden SSL) etableret succesfuldt");
+                            
+                            // Brug fallback forbindelsen
+                            var fallbackUserInfo = await SearchUserInADAsync(fallbackConnection, username);
+                            if (fallbackUserInfo == null)
+                            {
+                                _logger.LogWarning("Bruger {Username} ikke fundet i AD", username);
+                                return null;
+                            }
+                            
+                            // Test brugerens credentials med fallback forbindelse
+                            var fallbackUserCredentials = new NetworkCredential(fallbackUserInfo.SamAccountName, password, _domain);
+                            using var fallbackUserConnection = new LdapConnection(new LdapDirectoryIdentifier(_server, 389));
+                            fallbackUserConnection.SessionOptions.ProtocolVersion = 3;
+                            fallbackUserConnection.SessionOptions.SecureSocketLayer = false;
+                            fallbackUserConnection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+                            fallbackUserConnection.Credential = fallbackUserCredentials;
+                            
+                            await Task.Run(() => fallbackUserConnection.Bind());
+                            _logger.LogInformation("AD autentificering succesfuldt for bruger: {Username} (fallback metode)", username);
+                            return fallbackUserInfo;
+                        }
+                        else
+                        {
+                            throw; // Re-throw hvis det ikke er SSL problemet
+                        }
+                    }
 
                     // Opret credentials for AD reader bruger
                     var networkCredential = new NetworkCredential(_username, _password, _domain);
@@ -113,8 +170,9 @@ namespace API.Services
                 }
                 catch (LdapException ex)
                 {
-                    _logger.LogError(ex, "LDAP fejl ved autentificering af bruger: {Username}. Error: {ErrorCode} (forsøg {Attempt}/{MaxRetries})", 
-                        username, ex.ErrorCode, attempt, _maxRetries);
+                    var errorMessage = GetLDAPErrorMessage(ex.ErrorCode);
+                    _logger.LogError(ex, "LDAP fejl ved autentificering af bruger: {Username}. Error: {ErrorCode} - {ErrorMessage} (forsøg {Attempt}/{MaxRetries})", 
+                        username, ex.ErrorCode, errorMessage, attempt, _maxRetries);
                     
                     if (attempt < _maxRetries)
                     {
@@ -382,6 +440,99 @@ namespace API.Services
                     server, port, useSSL, ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Konverterer LDAP fejlkoder til læsbare fejlmeddelelser
+        /// </summary>
+        /// <param name="errorCode">LDAP fejl kode</param>
+        /// <returns>Læsbar fejlmeddelelse</returns>
+        private string GetLDAPErrorMessage(int errorCode)
+        {
+            return errorCode switch
+            {
+                0 => "Success",
+                1 => "Operations Error",
+                2 => "Protocol Error", 
+                3 => "Time Limit Exceeded",
+                4 => "Size Limit Exceeded",
+                5 => "Compare False",
+                6 => "Compare True",
+                7 => "Auth Method Not Supported",
+                8 => "Stronger Auth Required",
+                10 => "Referral",
+                11 => "Admin Limit Exceeded",
+                12 => "Unavailable Critical Extension",
+                13 => "Confidentiality Required",
+                14 => "SASL Bind In Progress",
+                16 => "No Such Attribute",
+                17 => "Undefined Attribute Type",
+                18 => "Inappropriate Matching",
+                19 => "Constraint Violation",
+                20 => "Attribute Or Value Exists",
+                21 => "Invalid Attribute Syntax",
+                32 => "No Such Object",
+                33 => "Alias Problem",
+                34 => "Invalid DN Syntax",
+                35 => "Alias Dereferencing Problem",
+                36 => "Inappropriate Authentication",
+                37 => "Invalid Credentials",
+                38 => "Insufficient Access Rights",
+                39 => "Busy",
+                40 => "Unavailable",
+                41 => "Unwilling To Perform",
+                42 => "Loop Detect",
+                43 => "Naming Violation",
+                44 => "Object Class Violation",
+                45 => "Not Allowed On Non Leaf",
+                46 => "Not Allowed On RDN",
+                47 => "Entry Already Exists",
+                48 => "Object Class Mods Prohibited",
+                49 => "Affects Multiple DSAs",
+                50 => "Other",
+                51 => "Server Down",
+                52 => "Local Error",
+                53 => "Encoding Error",
+                54 => "Decoding Error",
+                55 => "Timeout",
+                56 => "Auth Unknown",
+                57 => "Filter Error",
+                58 => "User Canceled",
+                59 => "Param Error",
+                60 => "No Memory",
+                61 => "Connect Error",
+                62 => "Not Supported",
+                63 => "Control Not Found",
+                64 => "No Results Returned",
+                65 => "More Results To Return",
+                66 => "Client Loop",
+                67 => "Referral Limit Exceeded",
+                68 => "Invalid Response",
+                69 => "Ambiguous Response",
+                70 => "TLS Not Supported",
+                80 => "Other",
+                81 => "Server Down",
+                82 => "Local Error",
+                83 => "Encoding Error",
+                84 => "Decoding Error",
+                85 => "Timeout",
+                86 => "Auth Unknown",
+                87 => "Filter Error",
+                88 => "User Canceled",
+                89 => "Param Error",
+                90 => "No Memory",
+                91 => "Connect Error",
+                92 => "Not Supported",
+                93 => "Control Not Found",
+                94 => "No Results Returned",
+                95 => "More Results To Return",
+                96 => "Client Loop",
+                97 => "Referral Limit Exceeded",
+                98 => "Invalid Response",
+                99 => "Ambiguous Response",
+                100 => "TLS Not Supported",
+                _ => $"Unknown LDAP Error Code: {errorCode}"
+            };
         }
 
         /// <summary>
