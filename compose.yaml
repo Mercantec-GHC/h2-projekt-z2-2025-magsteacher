@@ -25,6 +25,7 @@ services:
       - 8.8.4.4
     extra_hosts:
       - "ad-server:10.133.71.100"
+    restart: unless-stopped
 
   # Blazor WASM App
   blazor:
@@ -45,6 +46,7 @@ services:
       - api
     networks:
       - h2-network
+    restart: unless-stopped
 
   # Admin Dashboard (Svelte)
   admin-dashboard:
@@ -65,6 +67,7 @@ services:
       - api
     networks:
       - h2-network
+    restart: unless-stopped
 
   # Bruno API Tests
   bruno-tests:
