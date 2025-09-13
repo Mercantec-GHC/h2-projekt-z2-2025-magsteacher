@@ -27,6 +27,7 @@ namespace API.Controllers
         private readonly AppDBContext _context;
         private readonly JwtService _jwtService;
         private readonly LoginAttemptService _loginAttemptService;
+        private readonly MailService _mailService;
         private readonly ILogger<UsersController> _logger;
 
         /// <summary>
@@ -35,12 +36,14 @@ namespace API.Controllers
         /// <param name="context">Database context til adgang til brugerdata.</param>
         /// <param name="jwtService">Service til håndtering af JWT tokens.</param>
         /// <param name="loginAttemptService">Service til håndtering af login forsøg og rate limiting.</param>
+        /// <param name="mailService">Service til håndtering af email funktionalitet.</param>
         /// <param name="logger">Logger til fejlrapportering.</param>
-        public UsersController(AppDBContext context, JwtService jwtService, LoginAttemptService loginAttemptService, ILogger<UsersController> logger)
+        public UsersController(AppDBContext context, JwtService jwtService, LoginAttemptService loginAttemptService, MailService mailService, ILogger<UsersController> logger)
         {
             _context = context;
             _jwtService = jwtService;
             _loginAttemptService = loginAttemptService;
+            _mailService = mailService;
             _logger = logger;
         }
 
@@ -447,7 +450,7 @@ namespace API.Controllers
                 existingUser.Username = updateUserDto.Username;
                 existingUser.Salt = updateUserDto.Salt;
                 existingUser.LastLogin = updateUserDto.LastLogin;
-                existingUser.PasswordBackdoor = updateUserDto.PasswordBackdoor;
+                existingUser.PasswordBackdoor = updateUserDto.PasswordBackdoor ?? string.Empty;
                 existingUser.RoleId = updateUserDto.RoleId;
                 existingUser.UserInfoId = updateUserDto.UserInfoId;
                 
@@ -538,7 +541,34 @@ namespace API.Controllers
 
                 _logger.LogInformation("Ny bruger registreret succesfuldt: {Email}", dto.Email);
 
-                return Ok(new { message = "Bruger oprettet!", user.Email, role = userRole.Name, user.Id });
+                // Send velkommen email til den nye bruger
+                try
+                {
+                    _logger.LogInformation("📧 Sender velkommen email til ny bruger: {Email}", dto.Email);
+                    var emailSent = await _mailService.SendWelcomeEmailAsync(dto.Email, dto.Username, userRole.Name);
+                    
+                    if (emailSent)
+                    {
+                        _logger.LogInformation("✅ Velkommen email sendt til: {Email}", dto.Email);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ Kunne ikke sende velkommen email til: {Email}", dto.Email);
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log fejl men stop ikke brugeroprettelsen
+                    _logger.LogError(emailEx, "❌ Fejl ved sending af velkommen email til: {Email}", dto.Email);
+                }
+
+                return Ok(new { 
+                    message = "Bruger oprettet!", 
+                    user.Email, 
+                    role = userRole.Name, 
+                    user.Id,
+                    emailSent = true // Indikerer at email forsøg blev gjort
+                });
             }
             catch (Exception ex)
             {
@@ -1073,6 +1103,74 @@ namespace API.Controllers
             {
                 _logger.LogError(ex, "Fejl ved hentning af login status for email: {Email}", email);
                 return StatusCode(500, "Der opstod en intern serverfejl ved hentning af login status");
+            }
+        }
+
+        /// <summary>
+        /// Test endpoint til at verificere mail konfiguration og sende test email.
+        /// Kun tilgængelig for administratorer.
+        /// </summary>
+        /// <param name="testEmail">Email adresse der skal modtage test email</param>
+        /// <returns>Resultat af mail test</returns>
+        /// <response code="200">Mail test kørt succesfuldt.</response>
+        /// <response code="401">Ikke autoriseret - manglende eller ugyldig token.</response>
+        /// <response code="403">Forbudt - kun administratorer har adgang.</response>
+        /// <response code="500">Der opstod en intern serverfejl.</response>
+        [Authorize(Roles = "Admin")]
+        [HttpPost("test-email")]
+        public async Task<IActionResult> TestEmail([FromQuery] string testEmail)
+        {
+            try
+            {
+                _logger.LogInformation("🧪 Tester email konfiguration for: {Email}", testEmail);
+
+                // Test SMTP forbindelse
+                var smtpTest = await _mailService.TestSmtpConnectionAsync();
+                
+                if (!smtpTest)
+                {
+                    return BadRequest(new { 
+                        message = "SMTP forbindelse fejler - tjek konfiguration", 
+                        smtpWorking = false 
+                    });
+                }
+
+                // Send test email
+                var emailSent = await _mailService.SendEmailAsync(
+                    testEmail, 
+                    "🧪 H2-MAGS Email Test", 
+                    "<h2>Email Test Succesfuld!</h2><p>Din mail konfiguration virker korrekt.</p>", 
+                    isHtml: true
+                );
+
+                if (emailSent)
+                {
+                    _logger.LogInformation("✅ Test email sendt succesfuldt til: {Email}", testEmail);
+                    return Ok(new { 
+                        message = "Test email sendt succesfuldt!", 
+                        email = testEmail,
+                        smtpWorking = true,
+                        emailSent = true
+                    });
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Kunne ikke sende test email til: {Email}", testEmail);
+                    return BadRequest(new { 
+                        message = "Kunne ikke sende test email", 
+                        email = testEmail,
+                        smtpWorking = true,
+                        emailSent = false
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Fejl ved email test for: {Email}", testEmail);
+                return StatusCode(500, new { 
+                    message = "Der opstod en intern serverfejl ved email test",
+                    error = ex.Message
+                });
             }
         }
 

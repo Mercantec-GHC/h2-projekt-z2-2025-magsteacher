@@ -20,7 +20,7 @@ public class Program
         IConfiguration Configuration = builder.Configuration;
 
         string connectionString = Configuration.GetConnectionString("DefaultConnection")
-        ?? Environment.GetEnvironmentVariable("DEFAULT_CONNECTION");
+        ?? Environment.GetEnvironmentVariable("DEFAULT_CONNECTION") ?? "";
 
         builder.Services.AddDbContext<AppDBContext>(options =>
                 options.UseNpgsql(connectionString));
@@ -36,6 +36,9 @@ public class Program
         
         // Registrer Active Directory Service
         builder.Services.AddScoped<ActiveDirectoryService>();
+        
+        // Registrer Mail Service
+        builder.Services.AddScoped<MailService>();
 
         // Konfigurer JWT Authentication
         var jwtSecretKey = Configuration["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
@@ -52,7 +55,7 @@ public class Program
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecretKey)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecretKey ?? "")),
                 ValidateIssuer = true,
                 ValidIssuer = jwtIssuer,
                 ValidateAudience = true,

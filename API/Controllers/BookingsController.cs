@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using API.Services;
 
 namespace API.Controllers
 {
@@ -18,16 +19,19 @@ namespace API.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly AppDBContext _context;
+        private readonly MailService _mailService;
         private readonly ILogger<BookingsController> _logger;
 
         /// <summary>
         /// Initialiserer en ny instans af BookingsController.
         /// </summary>
         /// <param name="context">Database context til adgang til bookingdata.</param>
+        /// <param name="mailService">Service til håndtering af email funktionalitet.</param>
         /// <param name="logger">Logger til fejlrapportering.</param>
-        public BookingsController(AppDBContext context, ILogger<BookingsController> logger)
+        public BookingsController(AppDBContext context, MailService mailService, ILogger<BookingsController> logger)
         {
             _context = context;
+            _mailService = mailService;
             _logger = logger;
         }
 
@@ -386,6 +390,37 @@ namespace API.Controllers
                     .Include(b => b.Room)
                         .ThenInclude(r => r.Hotel)
                     .FirstOrDefaultAsync(b => b.Id == booking.Id);
+
+                // Send booking bekræftelse email til brugeren
+                try
+                {
+                    _logger.LogInformation("📧 Sender booking bekræftelse email til: {Email}", createdBooking?.User?.Email);
+                    var emailSent = await _mailService.SendBookingConfirmationEmailAsync(
+                        createdBooking!.User!.Email,
+                        createdBooking.User.Username,
+                        createdBooking.Room!.Number,
+                        createdBooking.Room.Hotel!.Name,
+                        createdBooking.StartDate,
+                        createdBooking.EndDate,
+                        createdBooking.NumberOfGuests,
+                        createdBooking.TotalPrice,
+                        createdBooking.Id
+                    );
+                    
+                    if (emailSent)
+                    {
+                        _logger.LogInformation("✅ Booking bekræftelse email sendt til: {Email}", createdBooking.User.Email);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ Kunne ikke sende booking bekræftelse email til: {Email}", createdBooking.User.Email);
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log fejl men stop ikke booking oprettelsen
+                    _logger.LogError(emailEx, "❌ Fejl ved sending af booking bekræftelse email til: {Email}", createdBooking?.User?.Email);
+                }
 
                 return CreatedAtAction("GetBooking", new { id = booking.Id }, BookingMapping.ToBookingGetDto(createdBooking!));
             }

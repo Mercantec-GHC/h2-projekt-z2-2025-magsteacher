@@ -19,12 +19,7 @@ services:
     volumes:
       - ./test-results:/app/test-results
     networks:
-      - h2-network
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    extra_hosts:
-      - "ad-server:10.133.71.100"
+      network_mode: host
     restart: unless-stopped
 
   # Blazor WASM App
@@ -102,9 +97,3 @@ services:
 networks:
   h2-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.enable_icc: "true"
-      com.docker.network.bridge.enable_ip_masquerade: "true"
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
