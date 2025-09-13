@@ -41,18 +41,45 @@ namespace API.Services
             _configuration = configuration;
             _logger = logger;
 
-            // Læs SMTP konfiguration fra appsettings.json
-            _smtpServer = _configuration["MailSettings:SmtpServer"] ?? "smtp.gmail.com";
-            _smtpPort = int.Parse(_configuration["MailSettings:SmtpPort"] ?? "587");
-            _smtpUsername = _configuration["MailSettings:SmtpUsername"] ?? "";
-            _smtpPassword = _configuration["MailSettings:SmtpPassword"] ?? "";
-            _fromEmail = _configuration["MailSettings:FromEmail"] ?? "";
-            _fromName = _configuration["MailSettings:FromName"] ?? "H2-MAGS System";
+            // Læs SMTP konfiguration - først fra environment variabler, derefter fra appsettings.json
+            _smtpServer = Environment.GetEnvironmentVariable("SMTP_SERVER") 
+                ?? _configuration["MailSettings:SmtpServer"] 
+                ?? "smtp.gmail.com";
+                
+            _smtpPort = int.Parse(Environment.GetEnvironmentVariable("SMTP_PORT") 
+                ?? _configuration["MailSettings:SmtpPort"] 
+                ?? "587");
+                
+            _smtpUsername = Environment.GetEnvironmentVariable("SMTP_USERNAME") 
+                ?? _configuration["MailSettings:SmtpUsername"] 
+                ?? "";
+                
+            _smtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD") 
+                ?? _configuration["MailSettings:SmtpPassword"] 
+                ?? "";
+                
+            _fromEmail = Environment.GetEnvironmentVariable("FROM_EMAIL") 
+                ?? _configuration["MailSettings:FromEmail"] 
+                ?? "";
+                
+            _fromName = Environment.GetEnvironmentVariable("FROM_NAME") 
+                ?? _configuration["MailSettings:FromName"] 
+                ?? "H2-MAGS System";
 
             // Valider at alle nødvendige settings er sat
             if (string.IsNullOrEmpty(_smtpUsername) || string.IsNullOrEmpty(_smtpPassword) || string.IsNullOrEmpty(_fromEmail))
             {
                 _logger.LogWarning("⚠️ Mail konfiguration mangler - email funktionalitet vil ikke virke");
+                _logger.LogWarning("SMTP_SERVER: {SmtpServer}", _smtpServer);
+                _logger.LogWarning("SMTP_USERNAME: {SmtpUsername}", string.IsNullOrEmpty(_smtpUsername) ? "MISSING" : "SET");
+                _logger.LogWarning("SMTP_PASSWORD: {SmtpPassword}", string.IsNullOrEmpty(_smtpPassword) ? "MISSING" : "SET");
+                _logger.LogWarning("FROM_EMAIL: {FromEmail}", string.IsNullOrEmpty(_fromEmail) ? "MISSING" : _fromEmail);
+            }
+            else
+            {
+                _logger.LogInformation("✅ Mail konfiguration loaded successfully");
+                _logger.LogInformation("SMTP_SERVER: {SmtpServer}", _smtpServer);
+                _logger.LogInformation("FROM_EMAIL: {FromEmail}", _fromEmail);
             }
         }
 

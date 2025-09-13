@@ -4,6 +4,7 @@ Projektet han findes her - [H2 Projekt forløb på Notion](https://mercantec.not
 
 Det er delt op i 4 mapper (3 hovedprojekter og Aspire)
 
+
 ## [Blazor](/Blazor/)
 
 Vi anbefaler at I bruger Blazor WebAssembly, da det er det vi underviser i. Den er koblet op på vores API gemmen APIService klassen i Blazor.
