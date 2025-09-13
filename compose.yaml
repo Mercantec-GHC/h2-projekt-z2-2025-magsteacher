@@ -18,8 +18,7 @@ services:
       - DOTNET_RUNNING_IN_CONTAINER=true
     volumes:
       - ./test-results:/app/test-results
-    networks:
-      network_mode: host
+    network_mode: host
     restart: unless-stopped
 
   # Blazor WASM App
