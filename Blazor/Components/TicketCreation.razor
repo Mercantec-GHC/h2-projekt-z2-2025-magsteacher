@@ -114,6 +114,7 @@
 
 @code {
     [Parameter] public string UserId { get; set; } = string.Empty;
+    [Parameter] public string Username { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnTicketCreated { get; set; }
 
     private TicketCreateDto ticketCreateDto = new();

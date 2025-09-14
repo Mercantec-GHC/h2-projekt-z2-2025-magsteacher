@@ -36,7 +36,8 @@ namespace Blazor.Services
         public TicketSignalRService(ILogger<TicketSignalRService> logger, IConfiguration configuration)
         {
             _logger = logger;
-            _hubUrl = configuration["ApiBaseUrl"] + "/tickethub";
+            var apiBaseUrl = configuration["ApiBaseUrl"] ?? "https://25h2-mags.mercantec.tech";
+            _hubUrl = apiBaseUrl.TrimEnd('/') + "/tickethub";
         }
 
         /// <summary>
@@ -52,7 +53,11 @@ namespace Blazor.Services
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(_hubUrl, options =>
                 {
-                    options.AccessTokenProvider = () => Task.FromResult(token);
+                    // For demo mode, skip JWT authentication
+                    if (token != "demo-token")
+                    {
+                        options.AccessTokenProvider = () => Task.FromResult(token);
+                    }
                 })
                 .WithAutomaticReconnect()
                 .Build();
@@ -243,28 +248,40 @@ namespace Blazor.Services
         {
             if (_hubConnection == null) return;
 
-            _hubConnection.On<string, string, string, bool, DateTime>("MessageReceived", async (id, ticketId, message, isInternal, timestamp) =>
+            _hubConnection.On<object>("MessageReceived", async (data) =>
             {
                 if (MessageReceived != null)
-                    await MessageReceived(id, ticketId, message, isInternal, timestamp);
+                {
+                    var dynamicData = data as dynamic;
+                    await MessageReceived(dynamicData.Id, dynamicData.TicketId, dynamicData.Message, dynamicData.IsInternal, dynamicData.Timestamp);
+                }
             });
 
-            _hubConnection.On<string, string, DateTime>("UserJoined", async (username, userId, timestamp) =>
+            _hubConnection.On<object>("UserJoined", async (data) =>
             {
                 if (UserJoined != null)
-                    await UserJoined(username, userId, timestamp);
+                {
+                    var dynamicData = data as dynamic;
+                    await UserJoined(dynamicData.Username, dynamicData.UserId, dynamicData.Timestamp);
+                }
             });
 
-            _hubConnection.On<string, string, DateTime>("UserLeft", async (username, userId, timestamp) =>
+            _hubConnection.On<object>("UserLeft", async (data) =>
             {
                 if (UserLeft != null)
-                    await UserLeft(username, userId, timestamp);
+                {
+                    var dynamicData = data as dynamic;
+                    await UserLeft(dynamicData.Username, dynamicData.UserId, dynamicData.Timestamp);
+                }
             });
 
-            _hubConnection.On<string, bool, DateTime>("TypingIndicator", async (username, isTyping, timestamp) =>
+            _hubConnection.On<object>("TypingIndicator", async (data) =>
             {
                 if (TypingIndicator != null)
-                    await TypingIndicator(username, isTyping, timestamp);
+                {
+                    var dynamicData = data as dynamic;
+                    await TypingIndicator(dynamicData.Username, dynamicData.IsTyping, dynamicData.Timestamp);
+                }
             });
 
             _hubConnection.On<string, string, string, DateTime>("StatusUpdated", async (ticketId, status, message, timestamp) =>
@@ -309,10 +326,13 @@ namespace Blazor.Services
                     await Error(message);
             });
 
-            _hubConnection.On<string>("Connected", async (message) =>
+            _hubConnection.On<object>("Connected", async (data) =>
             {
                 if (Connected != null)
-                    await Connected(message);
+                {
+                    var dynamicData = data as dynamic;
+                    await Connected(dynamicData.Message);
+                }
             });
 
             _hubConnection.On<string>("JoinedTicket", (message) =>

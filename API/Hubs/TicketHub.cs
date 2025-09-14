@@ -8,7 +8,6 @@ namespace API.Hubs
     /// SignalR Hub for live ticket chat kommunikation
     /// Implementerer real-time messaging mellem brugere og support medarbejdere
     /// </summary>
-    [Authorize]
     public class TicketHub : Hub
     {
         private readonly ILogger<TicketHub> _logger;
@@ -24,9 +23,10 @@ namespace API.Hubs
         /// <param name="ticketId">ID for ticket at tilslutte til</param>
         public async Task JoinTicketGroup(string ticketId)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            // For demo mode, use connection ID as user ID
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value ?? "User";
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -68,8 +68,8 @@ namespace API.Hubs
         /// <param name="ticketId">ID for ticket at forlade</param>
         public async Task LeaveTicketGroup(string ticketId)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Ticket_{ticketId}");
             
@@ -92,9 +92,9 @@ namespace API.Hubs
         /// <param name="isInternal">Om beskeden er intern (kun for staff)</param>
         public async Task SendMessage(string ticketId, string message, bool isInternal = false)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
+            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value ?? "User";
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -140,8 +140,8 @@ namespace API.Hubs
         /// <param name="isTyping">Om brugeren skriver</param>
         public async Task SendTypingIndicator(string ticketId, bool isTyping)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
 
             if (string.IsNullOrEmpty(userId))
                 return;
@@ -164,8 +164,8 @@ namespace API.Hubs
         /// <param name="message">Besked om ændringen</param>
         public async Task SendStatusUpdate(string ticketId, string status, string message)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
 
             if (string.IsNullOrEmpty(userId))
                 return;
@@ -235,9 +235,9 @@ namespace API.Hubs
         /// </summary>
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
+            var userRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value ?? "User";
 
             _logger.LogInformation("Bruger {Username} ({UserId}) med rolle {Role} tilsluttede SignalR", username, userId, userRole);
 
@@ -259,8 +259,8 @@ namespace API.Hubs
         /// </summary>
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.ConnectionId;
+            var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Demo User";
 
             _logger.LogInformation("Bruger {Username} ({UserId}) afbrød SignalR forbindelse", username, userId);
 
