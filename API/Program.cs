@@ -182,10 +182,7 @@ public class Program
         app.MapControllers();
         
         // Map SignalR Hub with proper negotiation
-        app.MapHub<TicketHub>("/tickethub", options =>
-        {
-            options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
-        });
+        app.MapHub<TicketHub>("/tickethub");
 
         // Set default port if not specified
         var port = Environment.GetEnvironmentVariable("ASPNETCORE_URLS")?.Split(':').LastOrDefault() ?? "8045";
