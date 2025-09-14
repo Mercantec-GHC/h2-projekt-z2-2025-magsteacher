@@ -12,7 +12,6 @@ namespace API.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class TicketsController : ControllerBase
     {
         private readonly TicketService _ticketService;
@@ -32,8 +31,9 @@ namespace API.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                // For demo mode, use demo user ID if no authenticated user
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "demo-user-123";
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "User";
 
                 if (string.IsNullOrEmpty(userId))
                 {
@@ -58,8 +58,9 @@ namespace API.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                // For demo mode, use demo user ID if no authenticated user
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "demo-user-123";
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "User";
 
                 if (string.IsNullOrEmpty(userId))
                 {
@@ -89,7 +90,8 @@ namespace API.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // For demo mode, use demo user ID if no authenticated user
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "demo-user-123";
                 if (string.IsNullOrEmpty(userId))
                 {
                     return Unauthorized("Bruger ikke fundet");

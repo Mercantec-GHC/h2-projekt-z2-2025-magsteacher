@@ -670,6 +670,12 @@ namespace API.Services
         /// </summary>
         public async Task<bool> ValidateBookingAccessAsync(string bookingId, string userId)
         {
+            // For demo mode, always allow access
+            if (userId == "demo-user-123")
+            {
+                return true;
+            }
+            
             var booking = await _context.Bookings.FindAsync(bookingId);
             return booking != null && booking.UserId == userId;
         }
