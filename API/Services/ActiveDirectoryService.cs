@@ -1,5 +1,6 @@
 using System.DirectoryServices.Protocols;
 using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace API.Services
 {
@@ -9,6 +10,7 @@ namespace API.Services
     public class ActiveDirectoryService
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<ActiveDirectoryService> _logger;
         
         // AD konfiguration fra appsettings.json
         private readonly string _server;
@@ -17,14 +19,19 @@ namespace API.Services
         private readonly string _domain;
         private readonly int _port;
         private readonly bool _useSSL;
+        private readonly int _connectionTimeout;
+        private readonly int _maxRetries;
+        private readonly int _retryDelayMs;
 
         /// <summary>
         /// Initialiserer en ny instans af ActiveDirectoryService
         /// </summary>
         /// <param name="configuration">Konfiguration til AD indstillinger</param>
-        public ActiveDirectoryService(IConfiguration configuration)
+        /// <param name="logger">Logger til fejlhåndtering</param>
+        public ActiveDirectoryService(IConfiguration configuration, ILogger<ActiveDirectoryService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
             
             // Læs AD konfiguration fra appsettings.json
             _server = _configuration["ActiveDirectory:Server"] ?? "10.133.71.100";
@@ -33,6 +40,12 @@ namespace API.Services
             _password = _configuration["ActiveDirectory:ReaderPassword"] ?? "Merc1234!";
             _port = int.Parse(_configuration["ActiveDirectory:Port"] ?? "389");
             _useSSL = bool.Parse(_configuration["ActiveDirectory:UseSSL"] ?? "false");
+            _connectionTimeout = int.Parse(_configuration["ActiveDirectory:ConnectionTimeout"] ?? "30");
+            _maxRetries = int.Parse(_configuration["ActiveDirectory:MaxRetries"] ?? "3");
+            _retryDelayMs = int.Parse(_configuration["ActiveDirectory:RetryDelayMs"] ?? "1000");
+            
+            _logger.LogInformation("ActiveDirectoryService initialiseret - Server: {Server}:{Port}, Domain: {Domain}", 
+                _server, _port, _domain);
         }
 
         /// <summary>
@@ -43,45 +56,73 @@ namespace API.Services
         /// <returns>ADUserInfo med brugerinformation hvis autentificering lykkes, ellers null</returns>
         public async Task<ADUserInfo?> AuthenticateUserAsync(string username, string password)
         {
-            try
+            _logger.LogInformation("Forsøger at autentificere bruger: {Username} mod AD server: {Server}:{Port}", 
+                username, _server, _port);
+
+            for (int attempt = 1; attempt <= _maxRetries; attempt++)
             {
-                // Opret LDAP forbindelse
-                using var connection = new LdapConnection(new LdapDirectoryIdentifier(_server, _port));
-                connection.SessionOptions.ProtocolVersion = 3;
-                connection.SessionOptions.SecureSocketLayer = _useSSL;
-                connection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
-
-                // Opret credentials for AD reader bruger
-                var networkCredential = new NetworkCredential(_username, _password, _domain);
-                connection.Credential = networkCredential;
-
-                // Åbn forbindelse
-                await Task.Run(() => connection.Bind());
-
-                // Søg efter brugeren i AD
-                var userInfo = await SearchUserInADAsync(connection, username);
-                if (userInfo == null)
+                try
                 {
-                    return null;
+                    _logger.LogDebug("Forsøg {Attempt}/{MaxRetries} - Opretter LDAP forbindelse til {Server}:{Port}", 
+                        attempt, _maxRetries, _server, _port);
+
+                    // Opret LDAP forbindelse
+                    using var connection = new LdapConnection(new LdapDirectoryIdentifier(_server, _port));
+                    connection.SessionOptions.ProtocolVersion = 3;
+                    connection.SessionOptions.SecureSocketLayer = _useSSL;
+                    connection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
+                    connection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+
+                    // Opret credentials for AD reader bruger
+                    var networkCredential = new NetworkCredential(_username, _password, _domain);
+                    connection.Credential = networkCredential;
+
+                    // Åbn forbindelse
+                    await Task.Run(() => connection.Bind());
+                    _logger.LogDebug("LDAP forbindelse etableret succesfuldt");
+
+                    // Søg efter brugeren i AD
+                    var userInfo = await SearchUserInADAsync(connection, username);
+                    if (userInfo == null)
+                    {
+                        _logger.LogWarning("Bruger {Username} ikke fundet i Active Directory", username);
+                        return null;
+                    }
+
+                    _logger.LogDebug("Bruger {Username} fundet i AD, tester credentials", username);
+
+                    // Test brugerens credentials
+                    var userCredentials = new NetworkCredential(userInfo.SamAccountName, password, _domain);
+                    using var userConnection = new LdapConnection(new LdapDirectoryIdentifier(_server, _port));
+                    userConnection.SessionOptions.ProtocolVersion = 3;
+                    userConnection.SessionOptions.SecureSocketLayer = _useSSL;
+                    userConnection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
+                    userConnection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
+                    userConnection.Credential = userCredentials;
+
+                    // Test autentificering
+                    await Task.Run(() => userConnection.Bind());
+
+                    _logger.LogInformation("Bruger {Username} autentificeret succesfuldt", username);
+                    return userInfo;
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Fejl ved forsøg {Attempt}/{MaxRetries} for bruger {Username}: {ErrorMessage}", 
+                        attempt, _maxRetries, username, ex.Message);
 
-                // Test brugerens credentials
-                var userCredentials = new NetworkCredential(userInfo.SamAccountName, password, _domain);
-                using var userConnection = new LdapConnection(new LdapDirectoryIdentifier(_server, _port));
-                userConnection.SessionOptions.ProtocolVersion = 3;
-                userConnection.SessionOptions.SecureSocketLayer = _useSSL;
-                userConnection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
-                userConnection.Credential = userCredentials;
+                    if (attempt == _maxRetries)
+                    {
+                        _logger.LogError("Alle {MaxRetries} forsøg fejlede for bruger {Username}", _maxRetries, username);
+                        return null;
+                    }
 
-                // Test autentificering
-                await Task.Run(() => userConnection.Bind());
-
-                return userInfo;
+                    // Vent før næste forsøg
+                    await Task.Delay(_retryDelayMs);
+                }
             }
-            catch
-            {
-                return null;
-            }
+
+            return null;
         }
 
         /// <summary>
@@ -189,6 +230,8 @@ namespace API.Services
         /// <returns>True hvis forbindelsen lykkes, ellers false</returns>
         public async Task<bool> TestLDAPConnectionAsync()
         {
+            _logger.LogInformation("Tester LDAP forbindelse til {Server}:{Port}", _server, _port);
+            
             try
             {
                 // Opret LDAP forbindelse
@@ -196,6 +239,7 @@ namespace API.Services
                 connection.SessionOptions.ProtocolVersion = 3;
                 connection.SessionOptions.SecureSocketLayer = _useSSL;
                 connection.SessionOptions.VerifyServerCertificate = (conn, cert) => true;
+                connection.Timeout = TimeSpan.FromSeconds(_connectionTimeout);
 
                 // Opret credentials for AD reader bruger
                 var networkCredential = new NetworkCredential(_username, _password, _domain);
@@ -204,10 +248,13 @@ namespace API.Services
                 // Åbn forbindelse
                 await Task.Run(() => connection.Bind());
 
+                _logger.LogInformation("LDAP forbindelse til {Server}:{Port} lykkedes", _server, _port);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Fejl ved LDAP forbindelse til {Server}:{Port}: {ErrorMessage}", 
+                    _server, _port, ex.Message);
                 return false;
             }
         }

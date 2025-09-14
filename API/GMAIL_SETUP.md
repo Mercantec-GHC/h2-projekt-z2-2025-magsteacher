@@ -137,3 +137,4 @@ Aktivér detaljeret logging for at se SMTP fejl:
 - [ ] appsettings.json opdateret med korrekte værdier
 - [ ] Test email sendt succesfuldt
 - [ ] Velkommen email fungerer ved brugeroprettelse
+

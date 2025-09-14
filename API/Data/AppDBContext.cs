@@ -15,6 +15,12 @@ namespace API.Data
         public DbSet<Hotel> Hotels { get; set; } = null!;
         public DbSet<Room> Rooms { get; set; } = null!;
         public DbSet<Booking> Bookings { get; set; } = null!;
+        
+        // Ticket System entities
+        public DbSet<Ticket> Tickets { get; set; } = null!;
+        public DbSet<TicketComment> TicketComments { get; set; } = null!;
+        public DbSet<TicketAttachment> TicketAttachments { get; set; } = null!;
+        public DbSet<TicketHistory> TicketHistories { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -61,6 +67,9 @@ namespace API.Data
                 .WithMany(r => r.Bookings)
                 .HasForeignKey(b => b.RoomId);
 
+            // Konfigurer Ticket entities
+            ConfigureTicketEntities(modelBuilder);
+
             // Seed roller og test brugere (kun til udvikling)
             SeedRoles(modelBuilder);
         }
@@ -106,6 +115,84 @@ namespace API.Data
             };
 
             modelBuilder.Entity<Role>().HasData(roles);
+        }
+
+        private void ConfigureTicketEntities(ModelBuilder modelBuilder)
+        {
+            // Konfigurer Ticket entity
+            modelBuilder.Entity<Ticket>(entity =>
+            {
+                // Ticket number skal være unikt
+                entity.HasIndex(t => t.TicketNumber).IsUnique();
+                
+                // Konfigurer foreign keys
+                entity.HasOne(t => t.Requester)
+                    .WithMany()
+                    .HasForeignKey(t => t.RequesterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.Assignee)
+                    .WithMany()
+                    .HasForeignKey(t => t.AssigneeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Booking)
+                    .WithMany()
+                    .HasForeignKey(t => t.BookingId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Room)
+                    .WithMany()
+                    .HasForeignKey(t => t.RoomId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Hotel)
+                    .WithMany()
+                    .HasForeignKey(t => t.HotelId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Konfigurer TicketComment entity
+            modelBuilder.Entity<TicketComment>(entity =>
+            {
+                entity.HasOne(tc => tc.Ticket)
+                    .WithMany(t => t.Comments)
+                    .HasForeignKey(tc => tc.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(tc => tc.Author)
+                    .WithMany()
+                    .HasForeignKey(tc => tc.AuthorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Konfigurer TicketAttachment entity
+            modelBuilder.Entity<TicketAttachment>(entity =>
+            {
+                entity.HasOne(ta => ta.Ticket)
+                    .WithMany(t => t.Attachments)
+                    .HasForeignKey(ta => ta.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ta => ta.UploadedBy)
+                    .WithMany()
+                    .HasForeignKey(ta => ta.UploadedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Konfigurer TicketHistory entity
+            modelBuilder.Entity<TicketHistory>(entity =>
+            {
+                entity.HasOne(th => th.Ticket)
+                    .WithMany(t => t.History)
+                    .HasForeignKey(th => th.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(th => th.ChangedBy)
+                    .WithMany()
+                    .HasForeignKey(th => th.ChangedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

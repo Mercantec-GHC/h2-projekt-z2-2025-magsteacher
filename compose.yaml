@@ -24,7 +24,8 @@ services:
       - FROM_NAME=${FROM_NAME}
     volumes:
       - ./test-results:/app/test-results
-    network_mode: host
+    networks:
+      - h2-network
     restart: unless-stopped
 
   # Blazor WASM App

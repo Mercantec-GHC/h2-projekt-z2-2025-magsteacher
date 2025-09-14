@@ -1,0 +1,233 @@
+@page "/ticket-demo-user"
+@using Blazor.Services
+@using DomainModels
+@using Blazor.Components
+@inject TicketSignalRService SignalRService
+@inject APIService APIService
+@inject ILogger<TicketDemoUser> Logger
+
+<PageTitle>Ticket Demo - Bruger</PageTitle>
+
+<div class="demo-container">
+    <div class="demo-header">
+        <h1>🎫 Ticket System Demo - Bruger Side</h1>
+        <p class="demo-description">
+            Dette er en demo af ticket systemet fra brugerens perspektiv. 
+            Du kan oprette tickets og chatte live med support medarbejdere.
+        </p>
+    </div>
+
+    <div class="demo-content">
+        @if (string.IsNullOrEmpty(currentTicketId))
+        {
+            <div class="ticket-creation-section">
+                <h3>Opret Nyt Ticket</h3>
+                <TicketCreation 
+                    UserId="@demoUserId" 
+                    Username="@demoUsername"
+                    OnTicketCreated="OnTicketCreated" />
+            </div>
+        }
+        else
+        {
+            <div class="chat-section">
+                <div class="chat-controls">
+                    <h3>Live Chat - Ticket @currentTicketNumber</h3>
+                    <button class="btn btn-outline-secondary" @onclick="LeaveChat">
+                        Forlad Chat
+                    </button>
+                </div>
+                
+                <TicketChat 
+                    TicketId="@currentTicketId"
+                    TicketNumber="@currentTicketNumber"
+                    UserId="@demoUserId"
+                    Username="@demoUsername"
+                    UserRole="User"
+                    CanSendInternalMessages="false" />
+            </div>
+        }
+    </div>
+
+    <div class="demo-info">
+        <h4>Demo Information</h4>
+        <ul>
+            <li><strong>Bruger ID:</strong> @demoUserId</li>
+            <li><strong>Brugernavn:</strong> @demoUsername</li>
+            <li><strong>Rolle:</strong> User (Booking ejer)</li>
+            <li><strong>SignalR Status:</strong> 
+                @if (SignalRService.IsConnected)
+                {
+                    <span class="text-success">🟢 Forbundet</span>
+                }
+                else
+                {
+                    <span class="text-danger">🔴 Ikke forbundet</span>
+                }
+            </li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    private string demoUserId = "demo-user-123";
+    private string demoUsername = "Demo Bruger";
+    private string currentTicketId = string.Empty;
+    private string currentTicketNumber = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize SignalR connection
+        await SignalRService.InitializeAsync("demo-token");
+        
+        // Register event handlers
+        SignalRService.Connected += OnConnected;
+        SignalRService.Error += OnError;
+    }
+
+    private async Task OnTicketCreated(string ticketId)
+    {
+        currentTicketId = ticketId;
+        currentTicketNumber = $"TKT-{DateTime.Now:yyyy}-{ticketId.Substring(0, 3)}";
+        
+        Logger.LogInformation("Ticket oprettet: {TicketId}", ticketId);
+        StateHasChanged();
+    }
+
+    private void LeaveChat()
+    {
+        currentTicketId = string.Empty;
+        currentTicketNumber = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task OnConnected(string message)
+    {
+        Logger.LogInformation("SignalR forbundet: {Message}", message);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnError(string message)
+    {
+        Logger.LogError("SignalR fejl: {Message}", message);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await SignalRService.DisposeAsync();
+    }
+}
+
+<style>
+    .demo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .demo-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .demo-header h1 {
+        margin-bottom: 1rem;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .demo-description {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .demo-content {
+        margin-bottom: 3rem;
+    }
+
+    .ticket-creation-section {
+        background-color: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-section {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .chat-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .chat-controls h3 {
+        margin: 0;
+        color: #495057;
+    }
+
+    .demo-info {
+        background-color: #e9ecef;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .demo-info h4 {
+        color: #495057;
+        margin-bottom: 1rem;
+    }
+
+    .demo-info ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .demo-info li {
+        margin-bottom: 0.5rem;
+        color: #6c757d;
+    }
+
+    .text-success {
+        color: #28a745 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s;
+    }
+
+    .btn-outline-secondary {
+        color: #6c757d;
+        border: 1px solid #6c757d;
+        background-color: transparent;
+    }
+
+    .btn-outline-secondary:hover {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+</style>

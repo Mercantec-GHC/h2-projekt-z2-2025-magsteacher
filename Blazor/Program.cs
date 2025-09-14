@@ -37,6 +37,9 @@ public class Program
 
         // Registrer AuthenticationService som Scoped service
         builder.Services.AddScoped<AuthenticationService>();
+        
+        // Registrer TicketSignalRService som Scoped service
+        builder.Services.AddScoped<TicketSignalRService>();
 
         var app = builder.Build();
 
