@@ -1,6 +1,8 @@
 @using DomainModels
 @using Blazor.Services
 @inject APIService ApiService
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
 
 <div class="card vacation-search-card shadow-sm mt-4">
     <div class="card-body">
@@ -171,7 +173,8 @@
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger mt-3" role="alert">
-                <i class="bi bi-exclamation-triangle"></i> @errorMessage
+                <i class="bi bi-exclamation-triangle"></i> 
+                @((MarkupString)errorMessage)
             </div>
         }
     </div>
@@ -255,6 +258,9 @@
     </div>
 }
 
+<!-- Booking Modal -->
+<BookingModal @ref="bookingModal" OnClose="OnBookingModalClose" OnBookingCreated="OnBookingCreated" />
+
 @code {
     private RoomAvailabilityQueryDto searchQuery = new();
     private HotelGetDto[]? hotels;
@@ -263,6 +269,7 @@
     private bool showAdvancedOptions = false;
     private string errorMessage = string.Empty;
     private int availableCount = 0;
+    private BookingModal? bookingModal;
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,10 +337,33 @@
         showAdvancedOptions = !showAdvancedOptions;
     }
 
-    private void BookRoom(RoomAvailabilityResultDto room)
+    private async Task BookRoom(RoomAvailabilityResultDto room)
     {
-        // This would typically navigate to a booking page or open a booking modal
-        // For now, just show a message
-        errorMessage = $"Booking funktionalitet for rum {room.Number} kommer snart!";
+        // Check if user is authenticated
+        if (!await AuthService.IsAuthenticatedAsync())
+        {
+            errorMessage = "Du skal være logget ind for at lave en booking. <a href='/login'>Log ind her</a>";
+            return;
+        }
+
+        // Show booking modal
+        if (bookingModal != null)
+        {
+            bookingModal.Show(room, searchQuery.CheckInDate, searchQuery.CheckOutDate);
+        }
+    }
+
+    private void OnBookingModalClose()
+    {
+        // Modal was closed, no action needed
+    }
+
+    private async Task OnBookingCreated(BookingGetDto booking)
+    {
+        // Booking was created successfully
+        errorMessage = string.Empty;
+        
+        // Navigate to booking details or show success message
+        Navigation.NavigateTo($"/booking/{booking.Id}");
     }
 }

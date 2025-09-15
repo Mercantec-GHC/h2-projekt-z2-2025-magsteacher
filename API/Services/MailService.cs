@@ -516,7 +516,7 @@ namespace API.Services
             <p>Du kan nu logge ind på systemet og begynde at bruge alle de tilgængelige funktioner.</p>
             
             <p style='text-align: center;'>
-                <a href='https://h2-mags-admin.mercantec.tech' class='button'>Log ind på systemet</a>
+                <a href='https://25h2-mags.mercantec.tech/login' class='button'>Log ind på systemet</a>
             </p>
             
             <p><strong>💡 Tip:</strong> Hvis du har spørgsmål eller brug for hjælp, er du velkommen til at kontakte systemadministratoren.</p>
