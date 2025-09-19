@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using Blazor.Services;
+using Blazor.Models;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,12 @@ public class Program
         
         // Registrer TicketSignalRService som Scoped service
         builder.Services.AddScoped<TicketSignalRService>();
+        
+        // Konfigurer API base URL for SignalR
+        builder.Services.Configure<ApiConfiguration>(config =>
+        {
+            config.ApiBaseUrl = apiEndpoint;
+        });
 
         var app = builder.Build();
 

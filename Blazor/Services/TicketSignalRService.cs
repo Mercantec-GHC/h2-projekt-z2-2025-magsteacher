@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Options;
 using System.ComponentModel;
+using Blazor.Models;
 
 namespace Blazor.Services
 {
@@ -33,10 +35,10 @@ namespace Blazor.Services
         public string? CurrentUsername { get; private set; }
         public string? CurrentUserRole { get; private set; }
 
-        public TicketSignalRService(ILogger<TicketSignalRService> logger, IConfiguration configuration)
+        public TicketSignalRService(ILogger<TicketSignalRService> logger, IOptions<ApiConfiguration> apiConfig)
         {
             _logger = logger;
-            var apiBaseUrl = configuration["ApiBaseUrl"] ?? "https://25h2-mags.mercantec.tech";
+            var apiBaseUrl = apiConfig.Value.ApiBaseUrl ?? "https://25h2-mags.mercantec.tech/";
             _hubUrl = apiBaseUrl.TrimEnd('/') + "/tickethub";
         }
 
@@ -70,11 +72,19 @@ namespace Blazor.Services
                 await _hubConnection.StartAsync();
                 _logger.LogInformation("SignalR forbindelse etableret");
                 OnPropertyChanged(nameof(IsConnected));
+                Connected?.Invoke("Forbundet til chat systemet");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Fejl ved etablering af SignalR forbindelse");
-                Error?.Invoke("Kunne ikke forbinde til chat systemet");
+                if (ex.Message.Contains("CORS") || ex.Message.Contains("Failed to fetch"))
+                {
+                    Error?.Invoke("CORS fejl: Kunne ikke forbinde til chat systemet. Tjek server konfiguration.");
+                }
+                else
+                {
+                    Error?.Invoke("Kunne ikke forbinde til chat systemet");
+                }
             }
         }
 
