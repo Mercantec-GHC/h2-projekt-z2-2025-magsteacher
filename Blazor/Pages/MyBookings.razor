@@ -215,7 +215,7 @@
 
         try
         {
-            bookings = await ApiService.GetMyBookingsAsync();
+            bookings = (await ApiService.GetMyBookingsAsync()).Data.ToArray();
         }
         catch (Exception ex)
         {

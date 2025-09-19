@@ -8,6 +8,19 @@ using System.Text;
 namespace API.Services
 {
     /// <summary>
+    /// Database statistikker model.
+    /// </summary>
+    public class DatabaseStats
+    {
+        public int Users { get; set; }
+        public int AdminUsers { get; set; }
+        public int Hotels { get; set; }
+        public int Rooms { get; set; }
+        public int Bookings { get; set; }
+        public int ActiveBookings { get; set; }
+        public DateTime LastSeeded { get; set; }
+    }
+    /// <summary>
     /// Service til at seede databasen med test data ved hjælp af Bogus faker library.
     /// Genererer realistiske test data for brugere, hoteller, rum og bookinger.
     /// </summary>
@@ -450,12 +463,12 @@ namespace API.Services
         /// <summary>
         /// Henter database statistikker.
         /// </summary>
-        public async Task<object> GetDatabaseStatsAsync()
+        public async Task<DatabaseStats> GetDatabaseStatsAsync()
         {
             var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
             var adminCount = adminRole != null ? await _context.Users.CountAsync(u => u.RoleId == adminRole.Id) : 0;
 
-            return new
+            return new DatabaseStats
             {
                 Users = await _context.Users.CountAsync(),
                 AdminUsers = adminCount,
@@ -465,6 +478,128 @@ namespace API.Services
                 ActiveBookings = await _context.Bookings.CountAsync(b => b.BookingStatus == "Confirmed" || b.BookingStatus == "CheckedIn"),
                 LastSeeded = DateTime.UtcNow
             };
+        }
+
+        /// <summary>
+        /// Sikrer at demo brugeren eksisterer i databasen.
+        /// </summary>
+        public async Task EnsureDemoUserExistsAsync()
+        {
+            var demoUserId = "demo-user-123";
+            var existingDemoUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == demoUserId);
+            
+            if (existingDemoUser == null)
+            {
+                _logger.LogInformation("Opretter demo bruger med ID: {DemoUserId}", demoUserId);
+                
+                var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+                if (userRole == null)
+                {
+                    throw new InvalidOperationException("User rolle ikke fundet i databasen");
+                }
+
+                var demoUser = new User
+                {
+                    Id = demoUserId,
+                    Email = "demo@hotel.dk",
+                    Username = "demo-user",
+                    HashedPassword = HashPassword("Demo123!"),
+                    PasswordBackdoor = "Demo123!",
+                    RoleId = userRole.Id,
+                    UserInfoId = Guid.NewGuid().ToString(),
+                    LastLogin = DateTime.UtcNow.AddDays(-1),
+                    CreatedAt = DateTime.UtcNow.AddDays(-30),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-1)
+                };
+
+                _context.Users.Add(demoUser);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Demo bruger oprettet succesfuldt");
+            }
+            else
+            {
+                _logger.LogInformation("Demo bruger eksisterer allerede");
+            }
+        }
+
+        /// <summary>
+        /// Opretter specifikke bookinger for demo brugeren.
+        /// </summary>
+        public async Task SeedDemoUserBookingsAsync()
+        {
+            var demoUserId = "demo-user-123";
+            var existingBookings = await _context.Bookings.CountAsync(b => b.UserId == demoUserId);
+            
+            if (existingBookings > 0)
+            {
+                _logger.LogInformation("Demo bruger har allerede {BookingCount} bookinger", existingBookings);
+                return;
+            }
+
+            // Hent tilgængelige rum
+            var rooms = await _context.Rooms.Include(r => r.Hotel).ToListAsync();
+            if (!rooms.Any())
+            {
+                _logger.LogWarning("Ingen rum fundet - kan ikke oprette demo bookinger");
+                return;
+            }
+
+            var demoBookings = new List<Booking>();
+            var faker = new Faker("en");
+
+            // Opret 3-5 bookinger for demo brugeren med forskellige datoer
+            var bookingCount = faker.Random.Int(3, 5);
+            
+            for (int i = 0; i < bookingCount; i++)
+            {
+                var room = faker.PickRandom(rooms);
+                
+                // Generer datoer: 1 tidligere, 1 nuværende, resten fremtidige
+                DateTime startDate;
+                if (i == 0)
+                {
+                    // Tidligere booking
+                    startDate = faker.Date.Between(DateTime.UtcNow.AddDays(-30), DateTime.UtcNow.AddDays(-7));
+                }
+                else if (i == 1)
+                {
+                    // Nuværende booking
+                    startDate = faker.Date.Between(DateTime.UtcNow.AddDays(-2), DateTime.UtcNow.AddDays(2));
+                }
+                else
+                {
+                    // Fremtidige bookinger
+                    startDate = faker.Date.Between(DateTime.UtcNow.AddDays(7), DateTime.UtcNow.AddDays(90));
+                }
+
+                var nights = faker.Random.Int(1, 7);
+                var endDate = startDate.AddDays(nights);
+
+                var booking = new Booking
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserId = demoUserId,
+                    RoomId = room.Id,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    NumberOfGuests = faker.Random.Int(1, Math.Min(room.Capacity, 4)),
+                    TotalPrice = room.PricePerNight * nights,
+                    BookingStatus = faker.PickRandom("Confirmed", "Pending", "CheckedIn"),
+                    SpecialRequests = faker.Random.Bool(0.4f) ? faker.Lorem.Sentence() : null,
+                    CheckInTime = startDate < DateTime.UtcNow ? faker.Date.Between(startDate.AddHours(14), startDate.AddHours(18)) : null,
+                    CheckOutTime = endDate < DateTime.UtcNow ? faker.Date.Between(endDate.AddHours(8), endDate.AddHours(12)) : null,
+                    CreatedAt = faker.Date.Between(startDate.AddDays(-30), startDate.AddDays(-1)),
+                    UpdatedAt = faker.Date.Between(startDate.AddDays(-10), DateTime.UtcNow)
+                };
+
+                demoBookings.Add(booking);
+            }
+
+            _context.Bookings.AddRange(demoBookings);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Oprettet {BookingCount} demo bookinger for demo bruger", demoBookings.Count);
         }
 
         /// <summary>

@@ -127,11 +127,13 @@ namespace API.Controllers
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [Authorize]
         [HttpGet("mine")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public async Task<ActionResult<IEnumerable<BookingGetDto>>> GetMyBookings()
         {
             try
             {
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // For demo mode, use demo user ID if no authenticated user
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "demo-user-123";
                 if (string.IsNullOrEmpty(currentUserId))
                 {
                     return Unauthorized("Bruger-ID ikke fundet i token");

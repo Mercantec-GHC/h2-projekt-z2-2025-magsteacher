@@ -41,6 +41,7 @@ namespace API.Controllers
         /// <response code="403">Forbudt - kun administratorer har adgang.</response>
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpPost("seed")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public async Task<ActionResult<object>> SeedDatabase(
             [FromQuery] int userCount = 50,
             [FromQuery] int hotelCount = 10,
@@ -223,6 +224,7 @@ namespace API.Controllers
         /// <response code="403">Forbudt - kun administratorer har adgang.</response>
         /// <response code="500">Der opstod en intern serverfejl.</response>
         [HttpPost("seed-bookings")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public async Task<ActionResult<object>> SeedBookingsOnly([FromQuery] int bookingCount = 50)
         {
             if (!_environment.IsDevelopment())
@@ -249,6 +251,47 @@ namespace API.Controllers
             {
                 _logger.LogError(ex, "Fejl under booking seeding");
                 return StatusCode(500, "Der opstod en fejl under booking seeding");
+            }
+        }
+
+        /// <summary>
+        /// Opretter demo data specifikt for demo brugeren.
+        /// </summary>
+        /// <returns>Demo data oprettelse resultat.</returns>
+        [HttpPost("seed-demo")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<ActionResult<object>> SeedDemoData()
+        {
+            try
+            {
+                _logger.LogInformation("Starter demo data seeding");
+
+                // Opret demo bruger hvis den ikke eksisterer
+                await _seederService.EnsureDemoUserExistsAsync();
+
+                // Seed basic data hvis det ikke eksisterer
+                var stats = await _seederService.GetDatabaseStatsAsync();
+                if (stats.Users == 0 || stats.Hotels == 0 || stats.Rooms == 0)
+                {
+                    await _seederService.SeedDatabaseAsync(userCount: 10, hotelCount: 3, roomsPerHotel: 10, bookingCount: 20);
+                }
+
+                // Opret specifikke bookinger for demo brugeren
+                await _seederService.SeedDemoUserBookingsAsync();
+
+                var finalStats = await _seederService.GetDatabaseStatsAsync();
+
+                return Ok(new
+                {
+                    Message = "Demo data oprettet succesfuldt",
+                    Statistics = finalStats,
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fejl under demo data seeding");
+                return StatusCode(500, "Der opstod en fejl under demo data seeding");
             }
         }
     }

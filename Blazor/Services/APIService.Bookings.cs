@@ -1,5 +1,7 @@
 using DomainModels;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Blazor.Models;
 
 namespace Blazor.Services
 {
@@ -31,16 +33,42 @@ namespace Blazor.Services
             }
         }
 
-        public async Task<BookingGetDto[]?> GetMyBookingsAsync()
+        public async Task<ApiResponse<IEnumerable<BookingGetDto>>> GetMyBookingsAsync()
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<BookingGetDto[]>("api/bookings/mine");
+                var response = await _httpClient.GetAsync("api/bookings/mine");
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var bookings = JsonSerializer.Deserialize<IEnumerable<BookingGetDto>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return new ApiResponse<IEnumerable<BookingGetDto>>
+                    {
+                        IsSuccess = true,
+                        Data = bookings
+                    };
+                }
+                else
+                {
+                    return new ApiResponse<IEnumerable<BookingGetDto>>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = $"Fejl ved hentning af mine bookinger: {response.StatusCode}"
+                    };
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Fejl ved hentning af mine bookinger: " + ex.Message);
-                return null;
+                return new ApiResponse<IEnumerable<BookingGetDto>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"Exception ved hentning af mine bookinger: {ex.Message}"
+                };
             }
         }
 

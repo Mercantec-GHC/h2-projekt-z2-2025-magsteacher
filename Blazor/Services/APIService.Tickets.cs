@@ -137,6 +137,48 @@ namespace Blazor.Services
         }
 
         /// <summary>
+        /// Hent mine tickets (tickets hvor brugeren er requester)
+        /// </summary>
+        public async Task<ApiResponse<IEnumerable<TicketGetDto>>> GetMyTicketsAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/tickets/my-tickets");
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var tickets = JsonSerializer.Deserialize<IEnumerable<TicketGetDto>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return new ApiResponse<IEnumerable<TicketGetDto>>
+                    {
+                        IsSuccess = true,
+                        Data = tickets
+                    };
+                }
+                else
+                {
+                    return new ApiResponse<IEnumerable<TicketGetDto>>
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = $"Fejl ved hentning af mine tickets: {response.StatusCode}"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<IEnumerable<TicketGetDto>>
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"Exception ved hentning af mine tickets: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
         /// Luk ticket
         /// </summary>
         public async Task<ApiResponse<TicketGetDto>> CloseTicketAsync(string ticketId, string resolution)

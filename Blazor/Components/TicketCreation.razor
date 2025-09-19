@@ -1,6 +1,7 @@
 @using Blazor.Services
 @using DomainModels
 @inject APIService APIService
+@inject AuthenticationService AuthService
 @inject ILogger<TicketCreation> Logger
 
 <div class="ticket-creation-container">
@@ -74,8 +75,49 @@
         </div>
 
         <div class="form-group mb-3">
-            <label for="bookingId">Booking ID (valgfri)</label>
-            <InputText id="bookingId" @bind-Value="ticketCreateDto.BookingId" class="form-control" placeholder="Hvis ticket er relateret til en booking" />
+            <label for="bookingId">Relateret Booking (valgfri)</label>
+            <div class="booking-selection">
+                <div class="booking-filters mb-2">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn @(bookingFilter == "all" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetBookingFilter("all"))">
+                            Alle
+                        </button>
+                        <button type="button" class="btn @(bookingFilter == "current" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetBookingFilter("current"))">
+                            Nuværende
+                        </button>
+                        <button type="button" class="btn @(bookingFilter == "upcoming" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetBookingFilter("upcoming"))">
+                            Fremtidige
+                        </button>
+                        <button type="button" class="btn @(bookingFilter == "past" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetBookingFilter("past"))">
+                            Tidligere
+                        </button>
+                    </div>
+                </div>
+                <InputSelect id="bookingId" @bind-Value="selectedBookingId" class="form-control" @onchange="OnBookingChanged">
+                    <option value="">Vælg en booking (valgfri)</option>
+                    @if (isLoadingBookings)
+                    {
+                        <option disabled>Henter bookinger...</option>
+                    }
+                    else
+                    {
+                        @foreach (var booking in filteredBookings)
+                        {
+                            <option value="@booking.Id">@GetBookingDisplayText(booking)</option>
+                        }
+                    }
+                </InputSelect>
+                @if (selectedBooking != null)
+                {
+                    <div class="booking-details mt-2">
+                        <small class="text-muted">
+                            <strong>@selectedBooking.HotelName</strong> - Rum @selectedBooking.RoomNumber (@selectedBooking.RoomType)<br>
+                            @selectedBooking.StartDate.ToString("dd/MM/yyyy") - @selectedBooking.EndDate.ToString("dd/MM/yyyy") 
+                            (@GetBookingStatusText(selectedBooking.BookingStatus))
+                        </small>
+                    </div>
+                }
+            </div>
         </div>
 
         <div class="form-actions">
@@ -121,11 +163,25 @@
     private bool isCreating = false;
     private string createdTicketId = string.Empty;
     private string errorMessage = string.Empty;
+    
+    // Booking related properties
+    private List<BookingGetDto> allBookings = new();
+    private List<BookingGetDto> filteredBookings = new();
+    private string selectedBookingId = string.Empty;
+    private BookingGetDto? selectedBooking = null;
+    private string bookingFilter = "all";
+    private bool isLoadingBookings = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Set default values
         ticketCreateDto.Priority = "Medium";
+        
+        // Ensure authentication is initialized
+        await AuthService.InitializeAsync();
+        
+        // Load user's bookings
+        await LoadBookings();
     }
 
     private async Task CreateTicket()
@@ -176,6 +232,90 @@
         // This will be handled by the parent component
         OnTicketCreated.InvokeAsync(createdTicketId);
     }
+
+    private async Task LoadBookings()
+    {
+        try
+        {
+            isLoadingBookings = true;
+            StateHasChanged();
+            
+            var response = await APIService.GetMyBookingsAsync();
+            if (response.IsSuccess && response.Data != null)
+            {
+                allBookings = response.Data.ToList();
+                ApplyBookingFilter();
+            }
+            else
+            {
+                Logger.LogError("Fejl ved hentning af bookinger: {Error}", response.ErrorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exception ved hentning af bookinger");
+        }
+        finally
+        {
+            isLoadingBookings = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetBookingFilter(string filter)
+    {
+        bookingFilter = filter;
+        ApplyBookingFilter();
+    }
+
+    private void ApplyBookingFilter()
+    {
+        var now = DateTime.Now;
+        filteredBookings = bookingFilter switch
+        {
+            "current" => allBookings.Where(b => b.StartDate <= now && b.EndDate >= now).ToList(),
+            "upcoming" => allBookings.Where(b => b.StartDate > now).ToList(),
+            "past" => allBookings.Where(b => b.EndDate < now).ToList(),
+            _ => allBookings.ToList()
+        };
+        
+        // If selected booking is no longer in filtered list, clear selection
+        if (selectedBooking != null && !filteredBookings.Any(b => b.Id == selectedBooking.Id))
+        {
+            selectedBookingId = string.Empty;
+            selectedBooking = null;
+            ticketCreateDto.BookingId = string.Empty;
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnBookingChanged(ChangeEventArgs e)
+    {
+        selectedBookingId = e.Value?.ToString() ?? string.Empty;
+        selectedBooking = allBookings.FirstOrDefault(b => b.Id == selectedBookingId);
+        ticketCreateDto.BookingId = selectedBookingId;
+    }
+
+    private string GetBookingDisplayText(BookingGetDto booking)
+    {
+        var status = GetBookingStatusText(booking.BookingStatus);
+        var dateRange = $"{booking.StartDate:dd/MM/yyyy} - {booking.EndDate:dd/MM/yyyy}";
+        return $"{booking.HotelName} - Rum {booking.RoomNumber} ({booking.RoomType}) - {dateRange} - {status}";
+    }
+
+    private string GetBookingStatusText(string status)
+    {
+        return status switch
+        {
+            "Confirmed" => "Bekræftet",
+            "Pending" => "Afventer",
+            "Cancelled" => "Annulleret",
+            "CheckedIn" => "Indtjekket",
+            "CheckedOut" => "Udtjekket",
+            _ => status
+        };
+    }
 }
 
 <style>
@@ -208,7 +348,36 @@
     .form-actions {
         margin-top: 2rem;
         padding-top: 1rem;
-        border-top: 1px solid #dee2e6;
+    }
+
+    .booking-selection {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .booking-filters .btn-group .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .booking-details {
+        background-color: #e9ecef;
+        padding: 0.75rem;
+        border-radius: 4px;
+        border-left: 3px solid #007bff;
+    }
+
+    .btn-outline-primary {
+        color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-outline-primary:hover {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
     }
 
     .btn {
